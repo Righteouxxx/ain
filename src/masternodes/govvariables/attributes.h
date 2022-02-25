@@ -90,10 +90,12 @@ using CAttributeValue = std::variant<bool, CAmount, CBalances, CTokenCurrencyPai
 class ATTRIBUTES : public GovVariable, public AutoRegistrator<GovVariable, ATTRIBUTES>
 {
 public:
+    bool IsEmpty() const override;
     Res Import(UniValue const &val) override;
     UniValue Export() const override;
     Res Validate(CCustomCSView const &mnview) const override;
-    Res Apply(CCustomCSView &mnview, const uint32_t height) override;
+    Res Apply(CCustomCSView &mnview, uint32_t height) override;
+    Res Erase(CCustomCSView &mnview, uint32_t height, std::vector<std::string> const &) override;
 
     std::string GetName() const override { return TypeName(); }
     static constexpr char const * TypeName() { return "ATTRIBUTES"; }
@@ -168,7 +170,7 @@ private:
     static const std::map<uint8_t, std::map<uint8_t,
             std::function<ResVal<CAttributeValue>(const std::string&)>>>& parseValue();
 
-    Res ProcessVariable(const std::string& key, const std::string& value,
+    Res ProcessVariable(const std::string& key, std::optional<std::string> value,
                         std::function<Res(const CAttributeType&, const CAttributeValue&)> applyVariable) const;
 };
 
