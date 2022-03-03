@@ -1342,13 +1342,12 @@ public:
         return !res ? res : addBalancesSetShares(obj.to);
     }
 
-
     Res HandleDFIP2201Contract(const CSmartContractMessage& obj) const {
         const auto attributes = mnview.GetAttributes();
         if (!attributes)
             return Res::Err("Attributes unavailable");
 
-        CDataStructureV0 activeKey{AttributeTypes::Param, ParamIDs::DFIP2201, DFIP2201Keys::Active};
+        CDataStructureV0 activeKey{AttributeTypes::Param, ParamIDs::DFIP2201, ParamKeys::Active};
 
         if (!attributes->GetValue(activeKey, false))
             return Res::Err("DFIP2201 smart contract is not enabled");
@@ -1372,7 +1371,7 @@ public:
         if (amount <= 0)
             return Res::Err("Amount out of range");
 
-        CDataStructureV0 minSwapKey{AttributeTypes::Param, ParamIDs::DFIP2201, DFIP2201Keys::MinSwap};
+        CDataStructureV0 minSwapKey{AttributeTypes::Param, ParamIDs::DFIP2201, ParamKeys::MinSwap};
         auto minSwap = attributes->GetValue(minSwapKey, CAmount{0});
 
         if (minSwap && amount < minSwap) {
@@ -1393,13 +1392,12 @@ public:
         const CTokenCurrencyPair btcUsd{"BTC","USD"};
         const CTokenCurrencyPair dfiUsd{"DFI","USD"};
 
-
         bool useNextPrice{false}, requireLivePrice{true};
         auto resVal = mnview.GetValidatedIntervalPrice(btcUsd, useNextPrice, requireLivePrice);
         if (!resVal)
             return std::move(resVal);
 
-        CDataStructureV0 premiumKey{AttributeTypes::Param, ParamIDs::DFIP2201, DFIP2201Keys::Premium};
+        CDataStructureV0 premiumKey{AttributeTypes::Param, ParamIDs::DFIP2201, ParamKeys::Premium};
         auto premium = attributes->GetValue(premiumKey, CAmount{2500000});
 
         const auto& btcPrice = MultiplyAmounts(*resVal.val, premium + COIN);
@@ -1421,6 +1419,63 @@ public:
         return Res::Ok();
     }
 
+    Res HandleDFIPXXXXContract(const CSmartContractMessage& obj) const {
+        const auto attributes = mnview.GetAttributes();
+        if (!attributes)
+            return Res::Err("Attributes unavailable");
+
+        CDataStructureV0 activeKey{AttributeTypes::Param, ParamIDs::DFIPXXXX, ParamKeys::Active};
+        if (!attributes->GetValue(activeKey, false))
+            return Res::Err("DFIPXXXX smart contract is not enabled");
+
+        if (obj.name != SMART_CONTRACT_DFIP_XXXX)
+            return Res::Err("DFIPXXXX contract mismatch - got: " + obj.name);
+
+        if (obj.accounts.size() != 1)
+            return Res::Err("Only one address entry expected for " + obj.name);
+
+        if (obj.accounts.begin()->second.balances.size() != 1)
+            return Res::Err("Only one amount entry expected for " + obj.name);
+
+        const auto& script = obj.accounts.begin()->first;
+        if (!HasAuth(script))
+            return Res::Err("Must have at least one input from supplied address");
+
+        const auto& id = obj.accounts.begin()->second.balances.begin()->first;
+        const auto& amount = obj.accounts.begin()->second.balances.begin()->second;
+
+        const auto token = mnview.GetToken(id);
+        if (!token)
+            return Res::Err("Specified token not found");
+
+        if (token->symbol == "DUSD")
+            return Res::Err("Token DUSD is not allowed in DFIPXXXXContract");
+
+        auto loanToken = pcustomcsview->GetLoanTokenByID(id);
+        if (!loanToken)
+            return Res::Err(token->symbol + " is not a valid loan token!");
+
+        CDataStructureV0 activeToken{AttributeTypes::Token, id.v, TokenKeys::FutureSwap};
+        if (!attributes->GetValue(activeToken, true))
+            return Res::Err(token->symbol + " is not an active DFIPXXX token!");
+
+        auto contracts = Params().GetConsensus().smartContracts;
+        const auto& contractPair = contracts.find(SMART_CONTRACT_DFIP_XXXX);
+        if (contractPair == contracts.end())
+            return Res::Err("Could not find smart contract SMART_CONTRACT_DFIP_XXXX!");
+        auto contractAddress = contractPair->second;
+
+        auto res = mnview.SubBalance(script, {{id}, amount});
+        if (!res)
+            return res;
+
+        res = mnview.AddBalance(contractAddress, {{id}, amount});
+        if (!res)
+            return res;
+
+        return Res::Ok();
+    }
+
     Res operator()(const CSmartContractMessage& obj) const {
         if (obj.accounts.empty()) {
             return Res::Err("Contract account parameters missing");
@@ -1434,6 +1489,8 @@ public:
         // Convert to switch when it's long enough.
         if (obj.name == SMART_CONTRACT_DFIP_2201)
             return HandleDFIP2201Contract(obj);
+        else if (obj.name == SMART_CONTRACT_DFIP_XXXX)
+            return HandleDFIPXXXXContract(obj);
 
         return Res::Err("Specified smart contract not found");
     }

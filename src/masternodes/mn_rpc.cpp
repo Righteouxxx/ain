@@ -769,6 +769,8 @@ UniValue isappliedcustomtx(const JSONRPCRequest& request) {
 static std::string GetContractCall(const std::string& str) {
     if (str == "DFIP2201") {
         return "dbtcdfiswap";
+    } else if (str == "DFIPXXXX") {
+        return "futureswap";
     }
 
     return str;

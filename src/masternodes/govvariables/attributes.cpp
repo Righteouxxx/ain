@@ -138,9 +138,10 @@ Res ATTRIBUTES::ProcessVariable(const std::string& key, const std::string& value
     CAttributeValue attribValue;
 
     if (type == AttributeTypes::Token) {
-        if (typeKey == TokenKeys::PaybackDFI) {
+        if (typeKey == TokenKeys::PaybackDFI
+        ||  typeKey == TokenKeys::FutureSwap) {
             if (value != "true" && value != "false") {
-                return Res::Err("Payback DFI value must be either \"true\" or \"false\"");
+                return Res::Err(displayKeys.at(type).at(typeKey) + " value must be either \"true\" or \"false\"");
             }
             attribValue = value == "true";
         } else if (typeKey == TokenKeys::PaybackDFIFeePCT) {
@@ -164,19 +165,19 @@ Res ATTRIBUTES::ProcessVariable(const std::string& key, const std::string& value
             return Res::Err("Unrecognised key");
         }
     } else if (type == AttributeTypes::Param) {
-        if (typeId == ParamIDs::DFIP2201) {
-            if (typeKey == DFIP2201Keys::Active) {
+        if (typeId == ParamIDs::DFIP2201 || typeId == ParamIDs::DFIPXXXX) {
+            if (typeKey == ParamKeys::Active) {
                 if (value != "true" && value != "false") {
-                    return Res::Err("DFIP2201 actve value must be either \"true\" or \"false\"");
+                    return Res::Err("Active key value must be either \"true\" or \"false\"");
                 }
                 attribValue = value == "true";
-            } else if (typeKey == DFIP2201Keys::Premium) {
+            } else if (typeKey == ParamKeys::Premium) {
                 auto res = VerifyPct(value);
                 if (!res) {
                     return std::move(res);
                 }
                 attribValue = *res.val;
-            } else if (typeKey == DFIP2201Keys::MinSwap) {
+            } else if (typeKey == ParamKeys::MinSwap) {
                 auto res = VerifyFloat(value);
                 if (!res) {
                     return std::move(res);
@@ -269,7 +270,8 @@ Res ATTRIBUTES::Validate(const CCustomCSView & view) const
         switch (attrV0->type) {
             case AttributeTypes::Token: {
                 if (attrV0->key == TokenKeys::PaybackDFI
-                ||  attrV0->key == TokenKeys::PaybackDFIFeePCT) {
+                ||  attrV0->key == TokenKeys::PaybackDFIFeePCT
+                ||  attrV0->key == TokenKeys::FutureSwap) {
                     uint32_t tokenId = attrV0->typeId;
                     if (!view.GetLoanTokenByID(DCT_ID{tokenId})) {
                         return Res::Err("No such loan token (%d)", tokenId);
@@ -297,7 +299,8 @@ Res ATTRIBUTES::Validate(const CCustomCSView & view) const
             break;
 
             case AttributeTypes::Param: {
-                if (attrV0->typeId != ParamIDs::DFIP2201) {
+                if (attrV0->typeId != ParamIDs::DFIP2201
+                &&  attrV0->typeId != ParamIDs::DFIPXXXX) {
                     return Res::Err("Unrecognised param id");
                 }
             }

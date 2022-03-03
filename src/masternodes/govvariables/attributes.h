@@ -22,6 +22,7 @@ enum AttributeTypes : uint8_t {
 
 enum ParamIDs : uint8_t  {
     DFIP2201  = 'a',
+    DFIPXXXX  = 'b',
     Economy   = 'e',
 };
 
@@ -29,15 +30,19 @@ enum EconomyKeys : uint8_t {
     PaybackDFITokens = 'a',
 };
 
-enum DFIP2201Keys : uint8_t  {
-    Active    = 'a',
-    Premium   = 'b',
-    MinSwap   = 'c',
+enum ParamKeys : uint8_t  {
+    Active     = 'a',
+    Premium    = 'b',
+    MinSwap    = 'c',
+    MaxAmount  = 'd',
+    Discount   = 'e',
+    Interval   = 'f',
 };
 
 enum TokenKeys : uint8_t  {
     PaybackDFI       = 'a',
     PaybackDFIFeePCT = 'b',
+    FutureSwap       = 'c',
 };
 
 enum PoolKeys : uint8_t {
@@ -130,7 +135,8 @@ private:
     };
 
     const std::map<std::string, uint8_t> allowedParamIDs{
-        {"dfip2201",         ParamIDs::DFIP2201}
+        {"dfip2201",         ParamIDs::DFIP2201},
+        {"dfipxxxx",         ParamIDs::DFIPXXXX},
     };
 
     const std::map<uint8_t, std::map<std::string, uint8_t>> allowedKeys{
@@ -138,6 +144,7 @@ private:
             AttributeTypes::Token, {
                 {"payback_dfi",         TokenKeys::PaybackDFI},
                 {"payback_dfi_fee_pct", TokenKeys::PaybackDFIFeePCT},
+                {"futureswap",          TokenKeys::FutureSwap},
             }
         },
         {
@@ -148,9 +155,12 @@ private:
         },
         {
             AttributeTypes::Param, {
-                {"active",              DFIP2201Keys::Active},
-                {"minswap",             DFIP2201Keys::MinSwap},
-                {"premium",             DFIP2201Keys::Premium},
+                {"active",              ParamKeys::Active},
+                {"premium",             ParamKeys::Premium},
+                {"minswap",             ParamKeys::MinSwap},
+                {"maxamount",           ParamKeys::MaxAmount},
+                {"discount",            ParamKeys::Discount},
+                {"interval",            ParamKeys::Interval},
             }
         },
     };
@@ -169,6 +179,7 @@ private:
 
     const std::map<uint8_t, std::string> displayParamsIDs{
         {ParamIDs::DFIP2201,       "dfip2201"},
+        {ParamIDs::DFIPXXXX,       "dfipxxxx"},
         {ParamIDs::Economy,        "economy"},
     };
 
@@ -177,6 +188,7 @@ private:
             AttributeTypes::Token, {
                 {TokenKeys::PaybackDFI,       "payback_dfi"},
                 {TokenKeys::PaybackDFIFeePCT, "payback_dfi_fee_pct"},
+                {TokenKeys::FutureSwap,       "futureswap"},
             }
         },
         {
@@ -187,9 +199,12 @@ private:
         },
         {
             AttributeTypes::Param, {
-                {DFIP2201Keys::Active,       "active"},
-                {DFIP2201Keys::Premium,      "premium"},
-                {DFIP2201Keys::MinSwap,      "minswap"},
+                {ParamKeys::Active,       "active"},
+                {ParamKeys::Premium,      "premium"},
+                {ParamKeys::MinSwap,      "minswap"},
+                {ParamKeys::MaxAmount,    "maxamount"},
+                {ParamKeys::Discount,     "discount"},
+                {ParamKeys::Interval,     "interval"},
             }
         },
         {
