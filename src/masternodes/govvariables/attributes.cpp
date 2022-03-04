@@ -144,7 +144,8 @@ Res ATTRIBUTES::ProcessVariable(const std::string& key, const std::string& value
                 return Res::Err(displayKeys.at(type).at(typeKey) + " value must be either \"true\" or \"false\"");
             }
             attribValue = value == "true";
-        } else if (typeKey == TokenKeys::PaybackDFIFeePCT) {
+        } else if (typeKey == TokenKeys::PaybackDFIFeePCT
+                || typeKey == TokenKeys::FutureSwapRewardPct) {
             auto res = VerifyPct(value);
             if (!res) {
                 return std::move(res);
@@ -171,8 +172,15 @@ Res ATTRIBUTES::ProcessVariable(const std::string& key, const std::string& value
                     return Res::Err("Active key value must be either \"true\" or \"false\"");
                 }
                 attribValue = value == "true";
-            } else if (typeKey == ParamKeys::Premium) {
+            } else if (typeKey == ParamKeys::Premium
+                    || typeKey == ParamKeys::RewardPct) {
                 auto res = VerifyPct(value);
+                if (!res) {
+                    return std::move(res);
+                }
+                attribValue = *res.val;
+            } else if (typeKey == ParamKeys::PeriodBlocks) {
+                auto res = VerifyInt32(value);
                 if (!res) {
                     return std::move(res);
                 }
@@ -207,7 +215,7 @@ Res ATTRIBUTES::Import(const UniValue & val) {
 
     for (const auto& pair : objMap) {
         auto res = ProcessVariable(
-            pair.first, pair.second.get_str(), [this](const CAttributeType& attribute, const CAttributeValue& value) {
+            pair.first, pair.second.getValStr(), [this](const CAttributeType& attribute, const CAttributeValue& value) {
                 if (auto attrV0 = boost::get<const CDataStructureV0>(&attribute)) {
                     if (attrV0->type == AttributeTypes::Live) {
                         return Res::Err("Live attribute cannot be set externally");
@@ -249,6 +257,8 @@ UniValue ATTRIBUTES::Export() const {
                 ret.pushKV(key, KeyBuilder(uvalue.get_real()));
             } else if (auto balances = boost::get<const CBalances>(&attribute.second)) {
                 ret.pushKV(key, AmountsToJSON(balances->balances));
+            } else if (auto int_val = boost::get<const int32_t>(&attribute.second)) {
+                ret.pushKV(key, *int_val);
             }
         } catch (const std::out_of_range&) {
             // Should not get here, that's mean maps are mismatched
@@ -271,7 +281,8 @@ Res ATTRIBUTES::Validate(const CCustomCSView & view) const
             case AttributeTypes::Token: {
                 if (attrV0->key == TokenKeys::PaybackDFI
                 ||  attrV0->key == TokenKeys::PaybackDFIFeePCT
-                ||  attrV0->key == TokenKeys::FutureSwap) {
+                ||  attrV0->key == TokenKeys::FutureSwap
+                ||  attrV0->key == TokenKeys::FutureSwapRewardPct) {
                     uint32_t tokenId = attrV0->typeId;
                     if (!view.GetLoanTokenByID(DCT_ID{tokenId})) {
                         return Res::Err("No such loan token (%d)", tokenId);

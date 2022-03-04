@@ -1960,7 +1960,7 @@ UniValue HandleSendDFIP2201(const JSONRPCRequest& request, CWalletCoinsUnlocker 
     }
 }
 
-UniValue HandleSendDFIPXXXX(const JSONRPCRequest& request, CWalletCoinsUnlocker pwallet) {
+UniValue HandleDepositDFIPXXXX(const JSONRPCRequest& request, CWalletCoinsUnlocker pwallet) {
     auto contracts = Params().GetConsensus().smartContracts;
     const auto& contractPair = contracts.find(SMART_CONTRACT_DFIP_XXXX);
     assert(contractPair != contracts.end());
@@ -2015,7 +2015,7 @@ UniValue executesmartcontract(const JSONRPCRequest& request) {
     auto pwallet = GetWallet(request);
 
     RPCHelpMan{"executesmartcontract",
-               "\nCreates and sends a transaction to either fund or execute a smart contract. Available contracts: dbtcdfiswap, futureswap" +
+               "\nCreates and sends a transaction to either fund or execute a smart contract. Available contracts: dbtcdfiswap, futureswap/deposit" +
                HelpRequiringPassphrase(pwallet) + "\n",
                {
                        {"name", RPCArg::Type::STR, RPCArg::Optional::NO, "Name of the smart contract to send funds to"},
@@ -2050,8 +2050,8 @@ UniValue executesmartcontract(const JSONRPCRequest& request) {
     const auto& contractName = request.params[0].get_str();
     if (contractName == "dbtcdfiswap") {
         return HandleSendDFIP2201(request, std::move(pwallet));
-    } else if (contractName == "futureswap") {
-        return HandleSendDFIPXXXX(request, std::move(pwallet));
+    } else if (contractName == "futureswap/deposit") {
+        return HandleDepositDFIPXXXX(request, std::move(pwallet));
     } else {
         throw JSONRPCError(RPC_INVALID_PARAMETER, "Specified smart contract not found");
     }

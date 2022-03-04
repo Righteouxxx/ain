@@ -458,6 +458,9 @@ class GovsetTest (DefiTestFramework):
         assert_raises_rpc_error(-5, "Amount must be a positive value", self.nodes[0].setgov, {"ATTRIBUTES":{'v0/params/dfip2201/minswap':'not_a_number'}})
         assert_raises_rpc_error(-5, "Amount must be a positive value", self.nodes[0].setgov, {"ATTRIBUTES":{'v0/params/dfip2201/premium': 'not_a_number'}})
         assert_raises_rpc_error(-5, "Amount must be a positive value", self.nodes[0].setgov, {"ATTRIBUTES":{'v0/params/dfip2201/premium': '-1'}})
+        assert_raises_rpc_error(-5, "Identifier must be a positive integer", self.nodes[0].setgov, {"ATTRIBUTES":{'v0/params/dfipxxxx/period_blocks': '-1'}})
+        assert_raises_rpc_error(-5, "Identifier must be a positive integer", self.nodes[0].setgov, {"ATTRIBUTES":{'v0/params/dfipxxxx/period_blocks': 'not_a_number'}})
+        assert_raises_rpc_error(-5, "Identifier must be a positive integer", self.nodes[0].setgov, {"ATTRIBUTES":{'v0/params/dfipxxxx/period_blocks': '1.1'}})
         assert_raises_rpc_error(-5, "Percentage exceeds 100%", self.nodes[0].setgov, {"ATTRIBUTES":{'v0/params/dfip2201/premium': '1.00000001'}})
         assert_raises_rpc_error(-5, "Unrecognised key argument provided", self.nodes[0].setgov, {"ATTRIBUTES":{'v0/params/dfip2201/not_a_param': '1.00000001'}})
 

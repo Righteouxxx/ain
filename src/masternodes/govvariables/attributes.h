@@ -31,18 +31,19 @@ enum EconomyKeys : uint8_t {
 };
 
 enum ParamKeys : uint8_t  {
-    Active     = 'a',
-    Premium    = 'b',
-    MinSwap    = 'c',
-    MaxAmount  = 'd',
-    Discount   = 'e',
-    Interval   = 'f',
+    Active         = 'a',
+    Premium        = 'b',
+    MinSwap        = 'c',
+    MaxAmount      = 'd',
+    RewardPct      = 'e',
+    PeriodBlocks   = 'f',
 };
 
 enum TokenKeys : uint8_t  {
-    PaybackDFI       = 'a',
-    PaybackDFIFeePCT = 'b',
-    FutureSwap       = 'c',
+    PaybackDFI          = 'a',
+    PaybackDFIFeePCT    = 'b',
+    FutureSwap          = 'c',
+    FutureSwapRewardPct = 'd',
 };
 
 enum PoolKeys : uint8_t {
@@ -82,7 +83,7 @@ struct CDataStructureV1 {
 };
 
 using CAttributeType = boost::variant<CDataStructureV0, CDataStructureV1>;
-using CAttributeValue = boost::variant<bool, CAmount, CBalances>;
+using CAttributeValue = boost::variant<bool, CAmount, CBalances, int32_t>;
 
 class ATTRIBUTES : public GovVariable, public AutoRegistrator<GovVariable, ATTRIBUTES>
 {
@@ -142,9 +143,10 @@ private:
     const std::map<uint8_t, std::map<std::string, uint8_t>> allowedKeys{
         {
             AttributeTypes::Token, {
-                {"payback_dfi",         TokenKeys::PaybackDFI},
-                {"payback_dfi_fee_pct", TokenKeys::PaybackDFIFeePCT},
-                {"futureswap",          TokenKeys::FutureSwap},
+                {"payback_dfi",             TokenKeys::PaybackDFI},
+                {"payback_dfi_fee_pct",     TokenKeys::PaybackDFIFeePCT},
+                {"futureswap",              TokenKeys::FutureSwap},
+                {"futureswap_reward_pct",   TokenKeys::FutureSwapRewardPct},
             }
         },
         {
@@ -159,8 +161,8 @@ private:
                 {"premium",             ParamKeys::Premium},
                 {"minswap",             ParamKeys::MinSwap},
                 {"maxamount",           ParamKeys::MaxAmount},
-                {"discount",            ParamKeys::Discount},
-                {"interval",            ParamKeys::Interval},
+                {"reward_pct",          ParamKeys::RewardPct},
+                {"period_blocks",       ParamKeys::PeriodBlocks},
             }
         },
     };
@@ -186,9 +188,10 @@ private:
     const std::map<uint8_t, std::map<uint8_t, std::string>> displayKeys{
         {
             AttributeTypes::Token, {
-                {TokenKeys::PaybackDFI,       "payback_dfi"},
-                {TokenKeys::PaybackDFIFeePCT, "payback_dfi_fee_pct"},
-                {TokenKeys::FutureSwap,       "futureswap"},
+                {TokenKeys::PaybackDFI,             "payback_dfi"},
+                {TokenKeys::PaybackDFIFeePCT,       "payback_dfi_fee_pct"},
+                {TokenKeys::FutureSwap,             "futureswap"},
+                {TokenKeys::FutureSwapRewardPct,    "futureswap_reward_pct"},
             }
         },
         {
@@ -203,8 +206,8 @@ private:
                 {ParamKeys::Premium,      "premium"},
                 {ParamKeys::MinSwap,      "minswap"},
                 {ParamKeys::MaxAmount,    "maxamount"},
-                {ParamKeys::Discount,     "discount"},
-                {ParamKeys::Interval,     "interval"},
+                {ParamKeys::RewardPct,    "reward_pct"},
+                {ParamKeys::PeriodBlocks, "period_blocks"},
             }
         },
         {

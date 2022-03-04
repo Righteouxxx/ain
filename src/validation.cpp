@@ -22,6 +22,7 @@
 #include <masternodes/anchors.h>
 #include <masternodes/govvariables/loan_daily_reward.h>
 #include <masternodes/govvariables/lp_daily_dfi_reward.h>
+#include <masternodes/govvariables/attributes.h>
 #include <masternodes/masternodes.h>
 #include <masternodes/mn_checks.h>
 #include <masternodes/vaulthistory.h>
@@ -2820,6 +2821,7 @@ bool CChainState::ConnectBlock(const CBlock& block, CValidationState& state, CBl
 
         ProcessOracleEvents(pindex, cache, chainparams);
         ProcessLoanEvents(pindex, cache, chainparams);
+        ProcessDFIPXXXXEvents(pindex, cache, chainparams);
 
         if (pindex->nHeight >= chainparams.GetConsensus().FortCanningHeight) {
             // Apply any pending GovVariable changes. Will come into effect on the next block.
@@ -3329,6 +3331,100 @@ void CChainState::ProcessOracleEvents(const CBlockIndex* pindex, CCustomCSView& 
         }
         return true;
     });
+}
+
+void CChainState::ProcessDFIPXXXXEvents(const CBlockIndex* pindex, CCustomCSView& cache, const CChainParams& chainparams) {
+    if (pindex->nHeight < chainparams.GetConsensus().FortCanningHillHeight) {
+        return;
+    }
+
+    const auto attributes = cache.GetAttributes();
+    if (!attributes) {
+        return;
+    }
+
+    CDataStructureV0 activeKey{AttributeTypes::Param, ParamIDs::DFIPXXXX, ParamKeys::Active};
+    if (!attributes->GetValue(activeKey, false))
+        return;
+
+    CDataStructureV0 intervalKey{AttributeTypes::Param, ParamIDs::DFIPXXXX, ParamKeys::PeriodBlocks};
+    auto blockInterval = attributes->GetValue(intervalKey, static_cast<int32_t>(Params().GetConsensus().blocksPerDay() * 7)); // Default to a week
+    if (pindex->nHeight % blockInterval != 0) {
+        return;
+    }
+
+    auto contracts = Params().GetConsensus().smartContracts;
+    const auto& contractPair = contracts.find(SMART_CONTRACT_DFIP_XXXX);
+    if (contractPair == contracts.end()) {
+        LogPrintf("ProcessDFIPXXXXEvents - Could not find smart contract SMART_CONTRACT_DFIP_XXXX!");
+        return;
+    }
+
+    auto dUsdToken = cache.GetToken("DUSD");
+    if (!dUsdToken) {
+        LogPrintf("ProcessDFIPXXXXEvents - Could not find DUSD token!");
+        return;
+    }
+
+    CDataStructureV0 rewardKey{AttributeTypes::Param, ParamIDs::DFIPXXXX, ParamKeys::RewardPct};
+    auto rewardPercent = attributes->GetValue(rewardKey, CAmount{5000000}); // Default to 5%
+
+    std::map<DCT_ID, CAmount> RewardPctPerToken{};
+    CAmount pctPerToken{};
+
+    CHistoryWriters writers{paccountHistoryDB.get(), pburnHistoryDB.get(), nullptr};
+    CAccountsHistoryWriter view(cache, pindex->nHeight, ~0u, {}, uint8_t(CustomTxType::SmartContract), &writers);
+
+    view.ForEachSmartContractBalance([&](std::pair<uint8_t, BalanceKey> const & key, CAmount val) {
+        if (key.first != ParamIDs::DFIPXXXX)
+            return false;
+
+        auto loanToken = view.GetLoanTokenByID(key.second.tokenID);
+        if (!loanToken) {
+            LogPrintf("ProcessDFIPXXXXEvents - Got invalid loan token : ", key.second.tokenID.ToString());
+            return true;
+        }
+
+        if (loanToken->symbol == "DUSD") {
+            LogPrintf("ProcessDFIPXXXXEvents - Got token DUSD");
+            return true;
+        }
+
+        auto amountInCurrency = view.GetAmountInCurrency(val, loanToken->fixedIntervalPriceId);
+        if (!amountInCurrency)
+            return true;
+
+        if (RewardPctPerToken.find(key.second.tokenID) == RewardPctPerToken.end()) {
+            CDataStructureV0 pctKey{AttributeTypes::Token, key.second.tokenID.v, TokenKeys::FutureSwapRewardPct};
+            pctPerToken = attributes->GetValue(pctKey, CAmount{0});
+            RewardPctPerToken[key.second.tokenID] = pctPerToken;
+        } else {
+            pctPerToken = RewardPctPerToken[key.second.tokenID];
+        }
+
+        // Swap to DUSD with premium and send back to origin address
+        auto totalDUSD = MultiplyAmounts(*amountInCurrency.val, rewardPercent + pctPerToken + COIN);
+        auto tokenImpl = static_cast<const CTokenImplementation&>(*dUsdToken->second);
+        auto res = view.AddMintedTokens(tokenImpl.creationTx, totalDUSD);
+        assert(res);
+        view.AddBalance(key.second.owner, CTokenAmount{dUsdToken->first, totalDUSD});
+
+        // Burn dToken
+        CTokenAmount tokenAmount = {key.second.tokenID, val};
+        res = view.SubBalance(contractPair->second, tokenAmount);
+        assert(res);
+        view.AddBalance(Params().GetConsensus().burnAddress, tokenAmount);
+        res = view.SubSmartContractBalance(key.first, key.second.owner, tokenAmount);
+        assert(res);
+
+        return true;
+    }, std::make_pair(ParamIDs::DFIPXXXX, BalanceKey{}));
+
+    view.Flush();
+    pburnHistoryDB->Flush();
+    if (paccountHistoryDB) {
+        paccountHistoryDB->Flush();
+    }
 }
 
 bool CChainState::FlushStateToDisk(

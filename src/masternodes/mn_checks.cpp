@@ -10,6 +10,7 @@
 #include <masternodes/oracles.h>
 #include <masternodes/res.h>
 #include <masternodes/vaulthistory.h>
+#include <masternodes/smartcontracts.h>
 
 #include <arith_uint256.h>
 #include <chainparams.h>
@@ -29,56 +30,56 @@
 std::string ToString(CustomTxType type) {
     switch (type)
     {
-        case CustomTxType::CreateMasternode:    return "CreateMasternode";
-        case CustomTxType::ResignMasternode:    return "ResignMasternode";
-        case CustomTxType::SetForcedRewardAddress: return "SetForcedRewardAddress";
-        case CustomTxType::RemForcedRewardAddress: return "RemForcedRewardAddress";
-        case CustomTxType::UpdateMasternode:    return "UpdateMasternode";
-        case CustomTxType::CreateToken:         return "CreateToken";
-        case CustomTxType::UpdateToken:         return "UpdateToken";
-        case CustomTxType::UpdateTokenAny:      return "UpdateTokenAny";
-        case CustomTxType::MintToken:           return "MintToken";
-        case CustomTxType::CreatePoolPair:      return "CreatePoolPair";
-        case CustomTxType::UpdatePoolPair:      return "UpdatePoolPair";
-        case CustomTxType::PoolSwap:            return "PoolSwap";
-        case CustomTxType::PoolSwapV2:          return "PoolSwap";
-        case CustomTxType::AddPoolLiquidity:    return "AddPoolLiquidity";
-        case CustomTxType::RemovePoolLiquidity: return "RemovePoolLiquidity";
-        case CustomTxType::UtxosToAccount:      return "UtxosToAccount";
-        case CustomTxType::AccountToUtxos:      return "AccountToUtxos";
-        case CustomTxType::AccountToAccount:    return "AccountToAccount";
+        case CustomTxType::CreateMasternode:        return "CreateMasternode";
+        case CustomTxType::ResignMasternode:        return "ResignMasternode";
+        case CustomTxType::SetForcedRewardAddress:  return "SetForcedRewardAddress";
+        case CustomTxType::RemForcedRewardAddress:  return "RemForcedRewardAddress";
+        case CustomTxType::UpdateMasternode:        return "UpdateMasternode";
+        case CustomTxType::CreateToken:             return "CreateToken";
+        case CustomTxType::UpdateToken:             return "UpdateToken";
+        case CustomTxType::UpdateTokenAny:          return "UpdateTokenAny";
+        case CustomTxType::MintToken:               return "MintToken";
+        case CustomTxType::CreatePoolPair:          return "CreatePoolPair";
+        case CustomTxType::UpdatePoolPair:          return "UpdatePoolPair";
+        case CustomTxType::PoolSwap:                return "PoolSwap";
+        case CustomTxType::PoolSwapV2:              return "PoolSwap";
+        case CustomTxType::AddPoolLiquidity:        return "AddPoolLiquidity";
+        case CustomTxType::RemovePoolLiquidity:     return "RemovePoolLiquidity";
+        case CustomTxType::UtxosToAccount:          return "UtxosToAccount";
+        case CustomTxType::AccountToUtxos:          return "AccountToUtxos";
+        case CustomTxType::AccountToAccount:        return "AccountToAccount";
         case CustomTxType::AnyAccountsToAccounts:   return "AnyAccountsToAccounts";
-        case CustomTxType::SmartContract:       return "SmartContract";
-        case CustomTxType::SetGovVariable:      return "SetGovVariable";
-        case CustomTxType::SetGovVariableHeight:return "SetGovVariableHeight";
-        case CustomTxType::AppointOracle:       return "AppointOracle";
-        case CustomTxType::RemoveOracleAppoint: return "RemoveOracleAppoint";
-        case CustomTxType::UpdateOracleAppoint: return "UpdateOracleAppoint";
-        case CustomTxType::SetOracleData:       return "SetOracleData";
-        case CustomTxType::AutoAuthPrep:        return "AutoAuth";
-        case CustomTxType::ICXCreateOrder:      return "ICXCreateOrder";
-        case CustomTxType::ICXMakeOffer:        return "ICXMakeOffer";
-        case CustomTxType::ICXSubmitDFCHTLC:    return "ICXSubmitDFCHTLC";
-        case CustomTxType::ICXSubmitEXTHTLC:    return "ICXSubmitEXTHTLC";
-        case CustomTxType::ICXClaimDFCHTLC:     return "ICXClaimDFCHTLC";
-        case CustomTxType::ICXCloseOrder:       return "ICXCloseOrder";
-        case CustomTxType::ICXCloseOffer:       return "ICXCloseOffer";
-        case CustomTxType::SetLoanCollateralToken: return "SetLoanCollateralToken";
-        case CustomTxType::SetLoanToken:        return "SetLoanToken";
-        case CustomTxType::UpdateLoanToken:     return "UpdateLoanToken";
-        case CustomTxType::LoanScheme:          return "LoanScheme";
-        case CustomTxType::DefaultLoanScheme:   return "DefaultLoanScheme";
-        case CustomTxType::DestroyLoanScheme:   return "DestroyLoanScheme";
-        case CustomTxType::Vault:               return "Vault";
-        case CustomTxType::CloseVault:          return "CloseVault";
-        case CustomTxType::UpdateVault:         return "UpdateVault";
-        case CustomTxType::DepositToVault:      return "DepositToVault";
-        case CustomTxType::WithdrawFromVault:   return "WithdrawFromVault";
-        case CustomTxType::TakeLoan:            return "TakeLoan";
-        case CustomTxType::PaybackLoan:         return "PaybackLoan";
-        case CustomTxType::AuctionBid:          return "AuctionBid";
-        case CustomTxType::Reject:              return "Reject";
-        case CustomTxType::None:                return "None";
+        case CustomTxType::SmartContract:           return "SmartContract";
+        case CustomTxType::SetGovVariable:          return "SetGovVariable";
+        case CustomTxType::SetGovVariableHeight:    return "SetGovVariableHeight";
+        case CustomTxType::AppointOracle:           return "AppointOracle";
+        case CustomTxType::RemoveOracleAppoint:     return "RemoveOracleAppoint";
+        case CustomTxType::UpdateOracleAppoint:     return "UpdateOracleAppoint";
+        case CustomTxType::SetOracleData:           return "SetOracleData";
+        case CustomTxType::AutoAuthPrep:            return "AutoAuth";
+        case CustomTxType::ICXCreateOrder:          return "ICXCreateOrder";
+        case CustomTxType::ICXMakeOffer:            return "ICXMakeOffer";
+        case CustomTxType::ICXSubmitDFCHTLC:        return "ICXSubmitDFCHTLC";
+        case CustomTxType::ICXSubmitEXTHTLC:        return "ICXSubmitEXTHTLC";
+        case CustomTxType::ICXClaimDFCHTLC:         return "ICXClaimDFCHTLC";
+        case CustomTxType::ICXCloseOrder:           return "ICXCloseOrder";
+        case CustomTxType::ICXCloseOffer:           return "ICXCloseOffer";
+        case CustomTxType::SetLoanCollateralToken:  return "SetLoanCollateralToken";
+        case CustomTxType::SetLoanToken:            return "SetLoanToken";
+        case CustomTxType::UpdateLoanToken:         return "UpdateLoanToken";
+        case CustomTxType::LoanScheme:              return "LoanScheme";
+        case CustomTxType::DefaultLoanScheme:       return "DefaultLoanScheme";
+        case CustomTxType::DestroyLoanScheme:       return "DestroyLoanScheme";
+        case CustomTxType::Vault:                   return "Vault";
+        case CustomTxType::CloseVault:              return "CloseVault";
+        case CustomTxType::UpdateVault:             return "UpdateVault";
+        case CustomTxType::DepositToVault:          return "DepositToVault";
+        case CustomTxType::WithdrawFromVault:       return "WithdrawFromVault";
+        case CustomTxType::TakeLoan:                return "TakeLoan";
+        case CustomTxType::PaybackLoan:             return "PaybackLoan";
+        case CustomTxType::AuctionBid:              return "AuctionBid";
+        case CustomTxType::Reject:                  return "Reject";
+        case CustomTxType::None:                    return "None";
     }
     return "None";
 }
@@ -1444,32 +1445,32 @@ public:
         const auto& id = obj.accounts.begin()->second.balances.begin()->first;
         const auto& amount = obj.accounts.begin()->second.balances.begin()->second;
 
-        const auto token = mnview.GetToken(id);
-        if (!token)
-            return Res::Err("Specified token not found");
-
-        if (token->symbol == "DUSD")
-            return Res::Err("Token DUSD is not allowed in DFIPXXXXContract");
-
-        auto loanToken = pcustomcsview->GetLoanTokenByID(id);
+        auto loanToken = mnview.GetLoanTokenByID(id);
         if (!loanToken)
-            return Res::Err(token->symbol + " is not a valid loan token!");
+            return Res::Err("No such loan token id %s", id.ToString());
+
+        if (loanToken->symbol == "DUSD")
+            return Res::Err("Token DUSD is not allowed in DFIPXXXXContract");
 
         CDataStructureV0 activeToken{AttributeTypes::Token, id.v, TokenKeys::FutureSwap};
         if (!attributes->GetValue(activeToken, true))
-            return Res::Err(token->symbol + " is not an active DFIPXXX token!");
+            return Res::Err(loanToken->symbol + " is not an active DFIPXXX token!");
 
         auto contracts = Params().GetConsensus().smartContracts;
         const auto& contractPair = contracts.find(SMART_CONTRACT_DFIP_XXXX);
         if (contractPair == contracts.end())
             return Res::Err("Could not find smart contract SMART_CONTRACT_DFIP_XXXX!");
-        auto contractAddress = contractPair->second;
 
-        auto res = mnview.SubBalance(script, {{id}, amount});
+        CTokenAmount tokenAmount = {{id}, amount};
+        auto res = mnview.SubBalance(script, tokenAmount);
         if (!res)
             return res;
 
-        res = mnview.AddBalance(contractAddress, {{id}, amount});
+        res = mnview.AddBalance(contractPair->second, tokenAmount);
+        if (!res)
+            return res;
+
+        res = mnview.AddSmartContractBalance(ParamIDs::DFIPXXXX, script, tokenAmount);
         if (!res)
             return res;
 
@@ -1560,7 +1561,6 @@ public:
                 if (!res) {
                     return Res::Err("%s: %s", var->GetName(), res.msg);
                 }
-
                 continue;
             }
 
