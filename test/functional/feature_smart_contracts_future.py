@@ -7,6 +7,7 @@
 
 from test_framework.test_framework import DefiTestFramework
 
+from test_framework.authproxy import JSONRPCException
 from test_framework.util import assert_equal, assert_raises_rpc_error
 from decimal import Decimal
 import time
@@ -22,6 +23,7 @@ class SmartContractFutureTest(DefiTestFramework):
     iddUSD = 0
     idDOGE = 0
     dfipDeposit = 'futureswap/deposit'
+    dfipList = 'futureswap/list'
     dfipxxxAddress = "bcrt1qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqpsqgljc"
     period_blocks = 10
     reward_pct = 0.1
@@ -277,6 +279,26 @@ class SmartContractFutureTest(DefiTestFramework):
         balances = self.nodes[0].getaccount(secondAddress)
         assert_equal(balances, ["120.00000000@DUSD"]) # 10% reward pct
 
+    def test_dfip_list(self):
+        address = self.nodes[0].getnewaddress()
+        self.nodes[0].accounttoaccount(self.account0, { address: "100@" + self.idDOGE })
+        self.nodes[0].generate(1)
+
+        self.nodes[0].executesmartcontract(self.dfipDeposit, '100@' + self.idDOGE, address)
+        self.nodes[0].generate(1)
+
+        list_balances = self.nodes[0].executesmartcontract(self.dfipList, "*", address)
+        assert_equal(list_balances, ["100.00000000@" + self.idDOGE])
+
+        otherAddress = self.nodes[0].getnewaddress()
+        other_balances = self.nodes[0].executesmartcontract(self.dfipList, "*", otherAddress)
+        assert_equal(other_balances, [])
+
+        assert_raises_rpc_error(-8, 'Amount key should be set to dummy "*" for futureswap/list', self.nodes[0].executesmartcontract, self.dfipList, "not_*")
+        assert_raises_rpc_error(-8, 'Loan token source address must be provided to list', self.nodes[0].executesmartcontract, self.dfipList, "*")
+        assert_raises_rpc_error(-5, 'Invalid address', self.nodes[0].executesmartcontract, self.dfipList, "*", '000000000000000000000000000000000000000000')
+        assert_raises_rpc_error(-5, 'Invalid address', self.nodes[0].executesmartcontract, self.dfipList, "*", 'not_an_address')
+
 
     def run_test(self):
         self.setup()
@@ -294,6 +316,7 @@ class SmartContractFutureTest(DefiTestFramework):
         self.test_token_tracking()
         self.test_account_history()
         self.test_reward_pct()
+        self.test_dfip_list()
 
 if __name__ == '__main__':
     SmartContractFutureTest().main()
