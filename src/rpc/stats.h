@@ -56,11 +56,11 @@ class CRPCStats
 private:
     std::atomic_bool lock_stats{false};
     std::map<std::string, RPCStats> map;
-    bool active{DEFAULT_RPC_STATS};
+    std::atomic_bool active{DEFAULT_RPC_STATS};
 
 public:
     bool isActive() {
-        return active;
+        return active.load();
     }
     void setActive(bool isActive) {
         active = isActive;
