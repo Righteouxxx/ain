@@ -8,7 +8,6 @@
 #include <util/system.h>
 
 #include <boost/circular_buffer.hpp>
-#include <boost/optional.hpp>
 
 const char * const DEFAULT_STATSFILE = "stats.log";
 static const uint8_t RPC_STATS_HISTORY_SIZE = 5;
@@ -61,7 +60,7 @@ public:
 
     void add(const std::string& name, const int64_t latency, const int64_t payload);
 
-    boost::optional<RPCStats> get(const std::string& name) {
+    std::optional<RPCStats> get(const std::string& name) {
         auto it = map.find(name);
         if (it == map.end()) {
             return {};
@@ -75,8 +74,8 @@ public:
         fsbridge::ofstream file(statsPath);
 
         UniValue jsonMap(UniValue::VOBJ);
-        for (const auto &entry : map) {
-            jsonMap.pushKV(entry.first, entry.second.toJSON());
+        for (const auto &[method, stats] : map) {
+            jsonMap.pushKV(method, stats.toJSON());
         }
         file << jsonMap.write() << '\n';
         file.close();

@@ -90,7 +90,7 @@ void CRPCStats::add(const std::string& name, const int64_t latency, const int64_
             std::max(payload, stats->payload.max)
         };
     } else {
-        stats = RPCStats{ name, latency, payload };
+        stats = { name, latency, payload };
     }
     stats->history.push_back({ stats->lastUsedTime, latency, payload });
     map[name] = *stats;
@@ -173,8 +173,8 @@ static UniValue listrpcstats(const JSONRPCRequest& request)
     }
 
     UniValue ret(UniValue::VARR);
-    for (const auto &entry : statsRPC.getMap()) {
-        ret.push_back(entry.second.toJSON());
+    for (const auto &[_, stats] : statsRPC.getMap()) {
+        ret.push_back(stats.toJSON());
     }
     return ret;
 }
