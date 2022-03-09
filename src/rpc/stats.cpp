@@ -3,7 +3,7 @@
 #include <rpc/server.h>
 #include <rpc/util.h>
 
-UniValue RPCStats::toJSON() const {
+UniValue RPCStats::toJSON() {
     UniValue stats(UniValue::VOBJ),
              latencyObj(UniValue::VOBJ),
              payloadObj(UniValue::VOBJ),
@@ -33,7 +33,6 @@ UniValue RPCStats::toJSON() const {
     stats.pushKV("history", historyArr);
     return stats;
 }
-
 
 RPCStats RPCStats::fromJSON(UniValue json) {
     RPCStats stats;
@@ -76,9 +75,6 @@ RPCStats RPCStats::fromJSON(UniValue json) {
 
 void CRPCStats::add(const std::string& name, const int64_t latency, const int64_t payload)
 {
-    static std::atomic_bool cs_cache(false);
-    CLockFreeGuard lock(cs_cache);
-
     auto stats = CRPCStats::get(name);
     if (stats) {
         stats->count++;
@@ -97,15 +93,16 @@ void CRPCStats::add(const std::string& name, const int64_t latency, const int64_
         stats = { name, latency, payload };
     }
     stats->history.push_back({ stats->lastUsedTime, latency, payload });
+
+    CLockFreeGuard lock(lock_stats);
     map[name] = *stats;
 }
 
-UniValue CRPCStats::toJSON() const {
-    static std::atomic_bool cs_cache(false);
-    CLockFreeGuard lock(cs_cache);
+UniValue CRPCStats::toJSON() {
+    CLockFreeGuard lock(lock_stats);
 
     UniValue ret(UniValue::VARR);
-    for (const auto &[_, stats] : map) {
+    for (auto &[_, stats] : map) {
         ret.push_back(stats.toJSON());
     }
     return ret;
@@ -141,7 +138,7 @@ static UniValue getrpcstats(const JSONRPCRequest& request)
         },
     }.Check(request);
 
-    if (!statsRPC.active) {
+    if (!statsRPC.isActive()) {
         throw JSONRPCError(RPC_INVALID_REQUEST, "Rpcstats is desactivated.");
     }
 
@@ -183,7 +180,7 @@ static UniValue listrpcstats(const JSONRPCRequest& request)
         },
     }.Check(request);
 
-    if (!statsRPC.active) {
+    if (!statsRPC.isActive()) {
         throw JSONRPCError(RPC_INVALID_REQUEST, "Rpcstats is desactivated.");
     }
 

@@ -2067,7 +2067,7 @@ bool AppInitMain(InitInterfaces& interfaces)
         ));
     }
 
-    if (!gArgs.GetBoolArg("-rpcstats", DEFAULT_RPC_STATS)) statsRPC.active = false;
+    if (!gArgs.GetBoolArg("-rpcstats", DEFAULT_RPC_STATS)) statsRPC.setActive(false);
 
     return true;
 }

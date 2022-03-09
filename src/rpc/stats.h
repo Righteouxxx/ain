@@ -44,7 +44,7 @@ struct RPCStats {
         count = 1;
     };
 
-    UniValue toJSON() const;
+    UniValue toJSON();
     static RPCStats fromJSON(UniValue json);
 };
 
@@ -54,30 +54,36 @@ struct RPCStats {
 class CRPCStats
 {
 private:
+    std::atomic_bool lock_stats{false};
     std::map<std::string, RPCStats> map;
-public:
     bool active{DEFAULT_RPC_STATS};
+
+public:
+    bool isActive() {
+        return active;
+    }
+    void setActive(bool isActive) {
+        active = isActive;
+    }
 
     void add(const std::string& name, const int64_t latency, const int64_t payload);
 
     std::optional<RPCStats> get(const std::string& name) {
+        CLockFreeGuard lock(lock_stats);
+
         auto it = map.find(name);
         if (it == map.end()) {
             return {};
         }
         return it->second;
     };
-    UniValue toJSON() const;
+    UniValue toJSON();
 
-    void save() const {
+    void save() {
         fs::path statsPath = GetDataDir() / DEFAULT_STATSFILE;
         fsbridge::ofstream file(statsPath);
 
-        UniValue jsonMap(UniValue::VOBJ);
-        for (const auto &[method, stats] : map) {
-            jsonMap.pushKV(method, stats.toJSON());
-        }
-        file << jsonMap.write() << '\n';
+        file << toJSON().write() << '\n';
         file.close();
     };
 
@@ -89,10 +95,15 @@ public:
         std::string line;
         file >> line;
 
-        UniValue jsonMap(UniValue::VOBJ);
-        jsonMap.read((const std::string)line);
-        for (const auto &key : jsonMap.getKeys()) {
-            map[key] = RPCStats::fromJSON(jsonMap[key]);
+        if (!line.size()) return;
+
+        UniValue arr(UniValue::VARR);
+        arr.read((const std::string)line);
+
+        CLockFreeGuard lock(lock_stats);
+        for (const auto &val : arr.getValues()) {
+            auto name = val["name"].get_str();
+            map[name] = RPCStats::fromJSON(val);
         }
         file.close();
     };
