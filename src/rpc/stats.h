@@ -67,7 +67,7 @@ public:
         }
         return it->second;
     };
-    std::map<std::string, RPCStats>& getMap() { return map; };
+    UniValue toJSON() const;
 
     void save() const {
         fs::path statsPath = GetDataDir() / DEFAULT_STATSFILE;

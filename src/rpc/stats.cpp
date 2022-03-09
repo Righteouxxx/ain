@@ -34,6 +34,7 @@ UniValue RPCStats::toJSON() const {
     return stats;
 }
 
+
 RPCStats RPCStats::fromJSON(UniValue json) {
     RPCStats stats;
 
@@ -75,6 +76,9 @@ RPCStats RPCStats::fromJSON(UniValue json) {
 
 void CRPCStats::add(const std::string& name, const int64_t latency, const int64_t payload)
 {
+    static std::atomic_bool cs_cache(false);
+    CLockFreeGuard lock(cs_cache);
+
     auto stats = CRPCStats::get(name);
     if (stats) {
         stats->count++;
@@ -94,6 +98,17 @@ void CRPCStats::add(const std::string& name, const int64_t latency, const int64_
     }
     stats->history.push_back({ stats->lastUsedTime, latency, payload });
     map[name] = *stats;
+}
+
+UniValue CRPCStats::toJSON() const {
+    static std::atomic_bool cs_cache(false);
+    CLockFreeGuard lock(cs_cache);
+
+    UniValue ret(UniValue::VARR);
+    for (const auto &[_, stats] : map) {
+        ret.push_back(stats.toJSON());
+    }
+    return ret;
 }
 
 static UniValue getrpcstats(const JSONRPCRequest& request)
@@ -172,11 +187,7 @@ static UniValue listrpcstats(const JSONRPCRequest& request)
         throw JSONRPCError(RPC_INVALID_REQUEST, "Rpcstats is desactivated.");
     }
 
-    UniValue ret(UniValue::VARR);
-    for (const auto &[_, stats] : statsRPC.getMap()) {
-        ret.push_back(stats.toJSON());
-    }
-    return ret;
+    return statsRPC.toJSON();
 }
 
 // clang-format off
