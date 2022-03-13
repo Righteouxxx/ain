@@ -63,7 +63,7 @@ public:
         return active.load();
     }
     void setActive(bool isActive) {
-        active = isActive;
+        active.store(isActive);
     }
 
     void add(const std::string& name, const int64_t latency, const int64_t payload);
