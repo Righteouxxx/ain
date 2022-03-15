@@ -157,7 +157,7 @@ DEFI_CORE_H = \
   masternodes/balances.h \
   masternodes/communityaccounttypes.h \
   masternodes/factory.h \
-  masternodes/smartcontracts.h \
+  masternodes/futures.h \
   masternodes/govvariables/attributes.h \
   masternodes/govvariables/icx_takerfee_per_btc.h \
   masternodes/govvariables/loan_daily_reward.h \
@@ -378,7 +378,7 @@ libdefi_server_a_SOURCES = \
   masternodes/anchors.cpp \
   masternodes/auctionhistory.cpp \
   masternodes/oracles.cpp \
-  masternodes/smartcontracts.cpp \
+  masternodes/futures.cpp \
   masternodes/govvariables/attributes.cpp \
   masternodes/govvariables/icx_takerfee_per_btc.cpp \
   masternodes/govvariables/loan_daily_reward.cpp \
@@ -396,6 +396,7 @@ libdefi_server_a_SOURCES = \
   masternodes/mn_checks.cpp \
   masternodes/mn_rpc.cpp \
   masternodes/rpc_accounts.cpp \
+  masternodes/rpc_futureswap.cpp \
   masternodes/rpc_customtx.cpp \
   masternodes/rpc_masternodes.cpp \
   masternodes/rpc_icxorderbook.cpp \

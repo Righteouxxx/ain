@@ -3373,52 +3373,49 @@ void CChainState::ProcessDFIPXXXXEvents(const CBlockIndex* pindex, CCustomCSView
     CAmount pctPerToken{};
 
     CHistoryWriters writers{paccountHistoryDB.get(), pburnHistoryDB.get(), nullptr};
-    CAccountsHistoryWriter view(cache, pindex->nHeight, ~0u, {}, uint8_t(CustomTxType::SmartContract), &writers);
+    CAccountsHistoryWriter view(cache, pindex->nHeight, ~0u, {}, uint8_t(CustomTxType::SmartContract), &writers); // TODO determine TX to track future swap
 
-    view.ForEachSmartContractBalance([&](std::pair<uint8_t, BalanceKey> const & key, CAmount val) {
-        if (key.first != ParamIDs::DFIPXXXX)
-            return false;
+    view.ForEachFutureSwapBalance([&](FutureSwapKey const & key, CAmount amount) {
 
-        auto loanToken = view.GetLoanTokenByID(key.second.tokenID);
-        if (!loanToken) {
-            LogPrintf("ProcessDFIPXXXXEvents - Got invalid loan token : ", key.second.tokenID.ToString());
+        auto targetToken = view.GetLoanTokenByID(key.idTokenTo);
+        if (!targetToken) {
+            LogPrintf("ProcessDFIPXXXXEvents - Got invalid loan token : ", key.idTokenTo.ToString());
             return true;
         }
 
-        if (loanToken->symbol == "DUSD") {
-            LogPrintf("ProcessDFIPXXXXEvents - Got token DUSD");
-            return true;
+        // Handle swap to dUSD
+        if (targetToken->symbol == "DUSD") {
+            auto amountInCurrency = view.GetAmountInCurrency(amount, targetToken->fixedIntervalPriceId);
+            if (!amountInCurrency)
+                return true;
+
+            if (RewardPctPerToken.find(key.tokenID) == RewardPctPerToken.end()) {
+                CDataStructureV0 pctKey{AttributeTypes::Token, key.tokenID.v, TokenKeys::FutureSwapRewardPct};
+                pctPerToken = attributes->GetValue(pctKey, CAmount{0});
+                RewardPctPerToken[key.tokenID] = pctPerToken;
+            } else {
+                pctPerToken = RewardPctPerToken[key.tokenID];
+            }
+
+            // Swap to DUSD with premium and send back to origin address
+            auto totalDUSD = MultiplyAmounts(*amountInCurrency.val, COIN - (rewardPercent + pctPerToken));
+            auto tokenImpl = static_cast<const CTokenImplementation&>(*dUsdToken->second);
+            auto res = view.AddMintedTokens(tokenImpl.creationTx, totalDUSD);
+            assert(res);
+            view.AddBalance(key.owner, CTokenAmount{dUsdToken->first, totalDUSD});
+
+            // Burn dToken
+            CTokenAmount tokenAmount = {key.tokenID, amount};
+            res = view.SubBalance(contractPair->second, tokenAmount);
+            assert(res);
+            view.AddBalance(Params().GetConsensus().burnAddress, tokenAmount);
+            res = view.SubFutureSwapBalance(key.owner, tokenAmount, key.idTokenTo);
+            assert(res);
         }
-
-        auto amountInCurrency = view.GetAmountInCurrency(val, loanToken->fixedIntervalPriceId);
-        if (!amountInCurrency)
-            return true;
-
-        if (RewardPctPerToken.find(key.second.tokenID) == RewardPctPerToken.end()) {
-            CDataStructureV0 pctKey{AttributeTypes::Token, key.second.tokenID.v, TokenKeys::FutureSwapRewardPct};
-            pctPerToken = attributes->GetValue(pctKey, CAmount{0});
-            RewardPctPerToken[key.second.tokenID] = pctPerToken;
-        } else {
-            pctPerToken = RewardPctPerToken[key.second.tokenID];
-        }
-
-        // Swap to DUSD with premium and send back to origin address
-        auto totalDUSD = MultiplyAmounts(*amountInCurrency.val, rewardPercent + pctPerToken + COIN);
-        auto tokenImpl = static_cast<const CTokenImplementation&>(*dUsdToken->second);
-        auto res = view.AddMintedTokens(tokenImpl.creationTx, totalDUSD);
-        assert(res);
-        view.AddBalance(key.second.owner, CTokenAmount{dUsdToken->first, totalDUSD});
-
-        // Burn dToken
-        CTokenAmount tokenAmount = {key.second.tokenID, val};
-        res = view.SubBalance(contractPair->second, tokenAmount);
-        assert(res);
-        view.AddBalance(Params().GetConsensus().burnAddress, tokenAmount);
-        res = view.SubSmartContractBalance(key.first, key.second.owner, tokenAmount);
-        assert(res);
+        // TODO handle swap to dTokens
 
         return true;
-    }, std::make_pair(ParamIDs::DFIPXXXX, BalanceKey{}));
+    }, FutureSwapKey{});
 
     view.Flush();
     pburnHistoryDB->Flush();

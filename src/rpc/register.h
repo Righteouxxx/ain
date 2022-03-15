@@ -35,7 +35,9 @@ void RegisterSpvRPCCommands(CRPCTable &tableRPC);
 void RegisterOraclesRPCCommands(CRPCTable &tableRPC);
 /** Register ICX orderbook RPC commands */
 void RegisterICXOrderbookRPCCommands(CRPCTable &tableRPC);
-/** Register Loan orderbook RPC commands */
+/** Register Future swap RPC commands */
+void RegisterFutureSwapRPCCommands(CRPCTable &tableRPC);
+/** Register Loan RPC commands */
 void RegisterLoanRPCCommands(CRPCTable &tableRPC);
 /** Register Vault RPC commands */
 void RegisterVaultRPCCommands(CRPCTable &tableRPC);
@@ -56,6 +58,7 @@ static inline void RegisterAllCoreRPCCommands(CRPCTable &t)
     RegisterSpvRPCCommands(t);
     RegisterOraclesRPCCommands(t);
     RegisterICXOrderbookRPCCommands(t);
+    RegisterFutureSwapRPCCommands(t);
     RegisterLoanRPCCommands(t);
     RegisterVaultRPCCommands(t);
 }

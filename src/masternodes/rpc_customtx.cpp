@@ -446,6 +446,17 @@ public:
         rpcInfo.pushKV("amount", obj.amount.ToString());
     }
 
+    void operator()(const CDepositFutureSwapMessage& obj) const {
+        rpcInfo.pushKV("idTokenTo", obj.idTokenTo.ToString());
+        rpcInfo.pushKV("from", ScriptToString(obj.from));
+        rpcInfo.pushKV("amount", obj.amounts.ToString());
+    }
+
+    void operator()(const CWithdrawFutureSwapMessage& obj) const {
+        rpcInfo.pushKV("from", ScriptToString(obj.from));
+        rpcInfo.pushKV("amount", obj.amounts.ToString());
+    }
+
     void operator()(const CCustomTxMessageNone&) const {
     }
 };

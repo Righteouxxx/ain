@@ -1960,95 +1960,11 @@ UniValue HandleSendDFIP2201(const JSONRPCRequest& request, CWalletCoinsUnlocker 
     }
 }
 
-UniValue HandleDepositDFIPXXXX(const JSONRPCRequest& request, CWalletCoinsUnlocker pwallet) {
-    auto contracts = Params().GetConsensus().smartContracts;
-    const auto& contractPair = contracts.find(SMART_CONTRACT_DFIP_XXXX);
-    assert(contractPair != contracts.end());
-
-    CTokenAmount amount = DecodeAmount(pwallet->chain(), request.params[1].get_str(), "amount");
-
-    if (request.params[2].isNull()) {
-        throw JSONRPCError(RPC_INVALID_PARAMETER, "Loan token source address must be provided for " + contractPair->first);
-    }
-
-    CTxDestination dest = DecodeDestination(request.params[2].get_str());
-    if (!IsValidDestination(dest)) {
-        throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, "Invalid address");
-    }
-    const auto script = GetScriptForDestination(dest);
-
-    CSmartContractMessage msg{};
-    msg.name = contractPair->first;
-    msg.accounts = {{script, {{{amount.nTokenId, amount.nValue}}}}};
-    // encode
-    CDataStream metadata(DfTxMarker, SER_NETWORK, PROTOCOL_VERSION);
-    metadata << static_cast<unsigned char>(CustomTxType::SmartContract)
-                << msg;
-    CScript scriptMeta;
-    scriptMeta << OP_RETURN << ToByteVector(metadata);
-
-    int targetHeight = chainHeight(*pwallet->chain().lock()) + 1;
-
-    const auto txVersion = GetTransactionVersion(targetHeight);
-    CMutableTransaction rawTx(txVersion);
-
-    rawTx.vout.emplace_back(0, scriptMeta);
-
-    CTransactionRef optAuthTx;
-    std::set<CScript> auth{script};
-    rawTx.vin = GetAuthInputsSmart(pwallet, rawTx.nVersion, auth, false, optAuthTx, request.params[3]);
-
-    // Set change address
-    CCoinControl coinControl;
-    coinControl.destChange = dest;
-
-    // fund
-    fund(rawTx, pwallet, optAuthTx, &coinControl);
-
-    // check execution
-    execTestTx(CTransaction(rawTx), targetHeight, optAuthTx);
-
-    return signsend(rawTx, pwallet, optAuthTx)->GetHash().GetHex();
-}
-
-UniValue HandleListDFIPXXXX(const JSONRPCRequest& request, CWalletCoinsUnlocker pwallet) {
-    auto contracts = Params().GetConsensus().smartContracts;
-    const auto& contractPair = contracts.find(SMART_CONTRACT_DFIP_XXXX);
-    assert(contractPair != contracts.end());
-
-    if (request.params[1].get_str() != "*") {
-        throw JSONRPCError(RPC_INVALID_PARAMETER, "Amount key should be set to dummy \"*\" for futureswap/list");
-    }
-
-    if (request.params[2].isNull()) {
-        throw JSONRPCError(RPC_INVALID_PARAMETER, "Loan token source address must be provided to list " + contractPair->first);
-    }
-
-    CTxDestination dest = DecodeDestination(request.params[2].get_str());
-    if (!IsValidDestination(dest)) {
-        throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, "Invalid address");
-    }
-    const auto script = GetScriptForDestination(dest);
-    UniValue balances{UniValue::VARR};
-    pcustomcsview->ForEachSmartContractBalance([&](std::pair<uint8_t, BalanceKey> const & key, CAmount val) {
-        if (key.first != ParamIDs::DFIPXXXX)
-            return false;
-
-        if (key.second.owner != script)
-            return false;
-
-        balances.push_back(CTokenAmount{key.second.tokenID, val}.ToString());
-        return true;
-    }, std::make_pair(ParamIDs::DFIPXXXX, BalanceKey{script, {}}));
-
-    return balances;
-}
-
 UniValue executesmartcontract(const JSONRPCRequest& request) {
     auto pwallet = GetWallet(request);
 
     RPCHelpMan{"executesmartcontract",
-               "\nCreates and sends a transaction to either fund or execute a smart contract. Available contracts: dbtcdfiswap, futureswap/deposit, futureswap/list" +
+               "\nCreates and sends a transaction to either fund or execute a smart contract. Available contracts: dbtcdfiswap" +
                HelpRequiringPassphrase(pwallet) + "\n",
                {
                        {"name", RPCArg::Type::STR, RPCArg::Optional::NO, "Name of the smart contract to send funds to"},
@@ -2083,10 +1999,6 @@ UniValue executesmartcontract(const JSONRPCRequest& request) {
     const auto& contractName = request.params[0].get_str();
     if (contractName == "dbtcdfiswap") {
         return HandleSendDFIP2201(request, std::move(pwallet));
-    } else if (contractName == "futureswap/deposit") {
-        return HandleDepositDFIPXXXX(request, std::move(pwallet));
-    } else if (contractName == "futureswap/list") {
-        return HandleListDFIPXXXX(request, std::move(pwallet));
     } else {
         throw JSONRPCError(RPC_INVALID_PARAMETER, "Specified smart contract not found");
     }

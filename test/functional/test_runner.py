@@ -137,7 +137,7 @@ BASE_SCRIPTS = [
     'rpc_misc.py',
     'rpc_mn_basic.py',
     'feature_smart_contracts.py',
-    'feature_smart_contracts_future.py',
+    'feature_future_swap.py',
     'feature_reject_customtxs.py',
     'feature_initdist.py',
     'feature_tokens_basic.py',

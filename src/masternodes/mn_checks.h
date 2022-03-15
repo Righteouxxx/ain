@@ -40,51 +40,54 @@ enum class CustomTxType : uint8_t
     Reject = 1, // Invalid TX type. Returned by GuessCustomTxType on invalid custom TX.
 
     // masternodes:
-    CreateMasternode      = 'C',
-    ResignMasternode      = 'R',
-    UpdateMasternode      = 'm',
+    CreateMasternode       = 'C',
+    ResignMasternode       = 'R',
+    UpdateMasternode       = 'm',
     SetForcedRewardAddress = 'F',
     RemForcedRewardAddress = 'f',
     // custom tokens:
-    CreateToken           = 'T',
-    MintToken             = 'M',
-    UpdateToken           = 'N', // previous type, only DAT flag triggers
-    UpdateTokenAny        = 'n', // new type of token's update with any flags/fields possible
+    CreateToken            = 'T',
+    MintToken              = 'M',
+    UpdateToken            = 'N', // previous type, only DAT flag triggers
+    UpdateTokenAny         = 'n', // new type of token's update with any flags/fields possible
     // dex orders - just not to overlap in future
 //    CreateOrder         = 'O',
 //    DestroyOrder        = 'E',
 //    MatchOrders         = 'A',
     //poolpair
-    CreatePoolPair        = 'p',
-    UpdatePoolPair        = 'u',
-    PoolSwap              = 's',
-    PoolSwapV2            = 'i',
-    AddPoolLiquidity      = 'l',
-    RemovePoolLiquidity   = 'r',
+    CreatePoolPair         = 'p',
+    UpdatePoolPair         = 'u',
+    PoolSwap               = 's',
+    PoolSwapV2             = 'i',
+    AddPoolLiquidity       = 'l',
+    RemovePoolLiquidity    = 'r',
     // accounts
-    UtxosToAccount        = 'U',
-    AccountToUtxos        = 'b',
-    AccountToAccount      = 'B',
-    AnyAccountsToAccounts = 'a',
-    SmartContract         = 'K',
+    UtxosToAccount         = 'U',
+    AccountToUtxos         = 'b',
+    AccountToAccount       = 'B',
+    AnyAccountsToAccounts  = 'a',
+    SmartContract          = 'K',
     //set governance variable
-    SetGovVariable        = 'G',
-    SetGovVariableHeight  = 'j',
+    SetGovVariable         = 'G',
+    SetGovVariableHeight   = 'j',
     // Auto auth TX
-    AutoAuthPrep          = 'A',
+    AutoAuthPrep           = 'A',
     // oracles
-    AppointOracle         = 'o',
-    RemoveOracleAppoint   = 'h',
-    UpdateOracleAppoint   = 't',
-    SetOracleData         = 'y',
+    AppointOracle          = 'o',
+    RemoveOracleAppoint    = 'h',
+    UpdateOracleAppoint    = 't',
+    SetOracleData          = 'y',
     // ICX
-    ICXCreateOrder      = '1',
-    ICXMakeOffer        = '2',
-    ICXSubmitDFCHTLC    = '3',
-    ICXSubmitEXTHTLC    = '4',
-    ICXClaimDFCHTLC     = '5',
-    ICXCloseOrder       = '6',
-    ICXCloseOffer       = '7',
+    ICXCreateOrder         = '1',
+    ICXMakeOffer           = '2',
+    ICXSubmitDFCHTLC       = '3',
+    ICXSubmitEXTHTLC       = '4',
+    ICXClaimDFCHTLC        = '5',
+    ICXCloseOrder          = '6',
+    ICXCloseOffer          = '7',
+    // Futures
+    DepositFutureSwap      = '8',
+    WithdrawFutureSwap     = '9',
     // Loans
     SetLoanCollateralToken = 'c',
     SetLoanToken           = 'g',
@@ -99,7 +102,7 @@ enum class CustomTxType : uint8_t
     WithdrawFromVault      = 'J',
     TakeLoan               = 'X',
     PaybackLoan            = 'H',
-    AuctionBid             = 'I'
+    AuctionBid             = 'I',
 };
 
 inline CustomTxType CustomTxCodeToType(uint8_t ch) {
@@ -153,6 +156,8 @@ inline CustomTxType CustomTxCodeToType(uint8_t ch) {
         case CustomTxType::TakeLoan:
         case CustomTxType::PaybackLoan:
         case CustomTxType::AuctionBid:
+        case CustomTxType::DepositFutureSwap:
+        case CustomTxType::WithdrawFutureSwap:
         case CustomTxType::Reject:
         case CustomTxType::None:
             return type;
@@ -368,7 +373,9 @@ typedef boost::variant<
     CWithdrawFromVaultMessage,
     CLoanTakeLoanMessage,
     CLoanPaybackLoanMessage,
-    CAuctionBidMessage
+    CAuctionBidMessage,
+    CDepositFutureSwapMessage,
+    CWithdrawFutureSwapMessage
 > CCustomTxMessage;
 
 CCustomTxMessage customTypeToMessage(CustomTxType txType);

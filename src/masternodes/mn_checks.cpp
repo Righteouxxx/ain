@@ -10,7 +10,7 @@
 #include <masternodes/oracles.h>
 #include <masternodes/res.h>
 #include <masternodes/vaulthistory.h>
-#include <masternodes/smartcontracts.h>
+#include <masternodes/futures.h>
 
 #include <arith_uint256.h>
 #include <chainparams.h>
@@ -78,6 +78,8 @@ std::string ToString(CustomTxType type) {
         case CustomTxType::TakeLoan:                return "TakeLoan";
         case CustomTxType::PaybackLoan:             return "PaybackLoan";
         case CustomTxType::AuctionBid:              return "AuctionBid";
+        case CustomTxType::DepositFutureSwap:       return "DepositFutureSwap";
+        case CustomTxType::WithdrawFutureSwap:      return "WithdrawFutureSwap";
         case CustomTxType::Reject:                  return "Reject";
         case CustomTxType::None:                    return "None";
     }
@@ -159,6 +161,8 @@ CCustomTxMessage customTypeToMessage(CustomTxType txType) {
         case CustomTxType::TakeLoan:                return CLoanTakeLoanMessage{};
         case CustomTxType::PaybackLoan:             return CLoanPaybackLoanMessage{};
         case CustomTxType::AuctionBid:              return CAuctionBidMessage{};
+        case CustomTxType::DepositFutureSwap:       return CDepositFutureSwapMessage{};
+        case CustomTxType::WithdrawFutureSwap:      return CWithdrawFutureSwapMessage{};
         case CustomTxType::Reject:                  return CCustomTxMessageNone{};
         case CustomTxType::None:                    return CCustomTxMessageNone{};
     }
@@ -335,6 +339,16 @@ public:
     }
 
     Res operator()(CSmartContractMessage& obj) const {
+        auto res = isPostFortCanningHillFork();
+        return !res ? res : serialize(obj);
+    }
+
+    Res operator()(CDepositFutureSwapMessage& obj) const {
+        auto res = isPostFortCanningHillFork();
+        return !res ? res : serialize(obj);
+    }
+
+    Res operator()(CWithdrawFutureSwapMessage& obj) const {
         auto res = isPostFortCanningHillFork();
         return !res ? res : serialize(obj);
     }
@@ -1353,15 +1367,6 @@ public:
         if (!attributes->GetValue(activeKey, false))
             return Res::Err("DFIP2201 smart contract is not enabled");
 
-        if (obj.name != SMART_CONTRACT_DFIP_2201)
-            return Res::Err("DFIP2201 contract mismatch - got: " + obj.name);
-
-        if (obj.accounts.size() != 1)
-            return Res::Err("Only one address entry expected for " + obj.name);
-
-        if (obj.accounts.begin()->second.balances.size() != 1)
-            return Res::Err("Only one amount entry expected for " + obj.name);
-
         const auto& script = obj.accounts.begin()->first;
         if (!HasAuth(script))
             return Res::Err("Must have at least one input from supplied address");
@@ -1420,17 +1425,102 @@ public:
         return Res::Ok();
     }
 
-    Res HandleDFIPXXXXContract(const CSmartContractMessage& obj) const {
+    Res operator()(const CDepositFutureSwapMessage& obj) const {
         const auto attributes = mnview.GetAttributes();
         if (!attributes)
             return Res::Err("Attributes unavailable");
+
+        auto contracts = Params().GetConsensus().smartContracts;
+        const auto& contractPair = contracts.find(SMART_CONTRACT_DFIP_XXXX);
+        if (contractPair == contracts.end())
+            return Res::Err("Could not find smart contract SMART_CONTRACT_DFIP_XXXX!");
 
         CDataStructureV0 activeKey{AttributeTypes::Param, ParamIDs::DFIPXXXX, ParamKeys::Active};
         if (!attributes->GetValue(activeKey, false))
             return Res::Err("DFIPXXXX smart contract is not enabled");
 
-        if (obj.name != SMART_CONTRACT_DFIP_XXXX)
-            return Res::Err("DFIPXXXX contract mismatch - got: " + obj.name);
+        auto& script = obj.from;
+        if (!HasAuth(script))
+            return Res::Err("Must have at least one input from supplied address");
+
+        auto targetToken = mnview.GetLoanTokenByID(obj.idTokenTo);
+        if (!targetToken) {
+            return Res::Err("CDepositFutureSwapMessage - Got invalid loan token : ", obj.idTokenTo.ToString());
+        }
+
+        for (const auto& [id, amount] : obj.amounts.balances)
+        {
+            auto loanToken = mnview.GetLoanTokenByID(id);
+            if (!loanToken)
+                return Res::Err("No such loan token id %s", id.ToString());
+
+            if (loanToken->symbol != "DUSD" && targetToken->symbol != "DUSD")
+                return Res::Err("dTokens can only be swapped for dUSD");
+
+            if (loanToken->symbol == "DUSD" && targetToken->symbol == "DUSD")
+                return Res::Err("dUSD can only be swapped for dTokens");
+
+            CDataStructureV0 activeToken{AttributeTypes::Token, id.v, TokenKeys::FutureSwap};
+            if (!attributes->GetValue(activeToken, true))
+                return Res::Err(loanToken->symbol + " is not an active DFIPXXX token!");
+
+            CTokenAmount tokenAmount = {{id}, amount};
+            auto res = mnview.SubBalance(script, tokenAmount);
+            if (!res)
+                return res;
+
+            res = mnview.AddBalance(contractPair->second, tokenAmount);
+            if (!res)
+                return res;
+
+            return mnview.AddFutureSwapBalance(script, tokenAmount, obj.idTokenTo);
+        }
+    }
+
+    Res operator()(const CWithdrawFutureSwapMessage& obj) const {
+        const auto attributes = mnview.GetAttributes();
+        if (!attributes)
+            return Res::Err("Attributes unavailable");
+
+        auto contracts = Params().GetConsensus().smartContracts;
+        const auto& contractPair = contracts.find(SMART_CONTRACT_DFIP_XXXX);
+        if (contractPair == contracts.end())
+            return Res::Err("Could not find smart contract SMART_CONTRACT_DFIP_XXXX!");
+
+        CDataStructureV0 activeKey{AttributeTypes::Param, ParamIDs::DFIPXXXX, ParamKeys::Active};
+        if (!attributes->GetValue(activeKey, false))
+            return Res::Err("DFIPXXXX smart contract is not enabled");
+
+        auto& script = obj.from;
+        if (!HasAuth(script))
+            return Res::Err("Must have at least one input from supplied address");
+
+        for (const auto& [id, amount] : obj.amounts.balances)
+        {
+            auto loanToken = mnview.GetLoanTokenByID(id);
+            if (!loanToken)
+                return Res::Err("No such loan token id %s", id.ToString());
+
+            CDataStructureV0 activeToken{AttributeTypes::Token, id.v, TokenKeys::FutureSwap};
+            if (!attributes->GetValue(activeToken, true))
+                return Res::Err(loanToken->symbol + " is not an active DFIPXXX token!");
+
+            CTokenAmount tokenAmount = {{id}, amount};
+            auto res = mnview.SubBalance(script, tokenAmount);
+            if (!res)
+                return res;
+
+            res = mnview.AddBalance(contractPair->second, tokenAmount);
+            if (!res)
+                return res;
+
+            return mnview.SubFutureSwapBalance(script, tokenAmount, obj.idTokenTo);
+        }
+    }
+
+    Res operator()(const CSmartContractMessage& obj) const {
+        if (obj.accounts.empty())
+            return Res::Err("Contract account parameters missing");
 
         if (obj.accounts.size() != 1)
             return Res::Err("Only one address entry expected for " + obj.name);
@@ -1438,60 +1528,9 @@ public:
         if (obj.accounts.begin()->second.balances.size() != 1)
             return Res::Err("Only one amount entry expected for " + obj.name);
 
-        const auto& script = obj.accounts.begin()->first;
-        if (!HasAuth(script))
-            return Res::Err("Must have at least one input from supplied address");
-
-        const auto& id = obj.accounts.begin()->second.balances.begin()->first;
-        const auto& amount = obj.accounts.begin()->second.balances.begin()->second;
-
-        auto loanToken = mnview.GetLoanTokenByID(id);
-        if (!loanToken)
-            return Res::Err("No such loan token id %s", id.ToString());
-
-        if (loanToken->symbol == "DUSD")
-            return Res::Err("Token DUSD is not allowed in DFIPXXXXContract");
-
-        CDataStructureV0 activeToken{AttributeTypes::Token, id.v, TokenKeys::FutureSwap};
-        if (!attributes->GetValue(activeToken, true))
-            return Res::Err(loanToken->symbol + " is not an active DFIPXXX token!");
-
-        auto contracts = Params().GetConsensus().smartContracts;
-        const auto& contractPair = contracts.find(SMART_CONTRACT_DFIP_XXXX);
-        if (contractPair == contracts.end())
-            return Res::Err("Could not find smart contract SMART_CONTRACT_DFIP_XXXX!");
-
-        CTokenAmount tokenAmount = {{id}, amount};
-        auto res = mnview.SubBalance(script, tokenAmount);
-        if (!res)
-            return res;
-
-        res = mnview.AddBalance(contractPair->second, tokenAmount);
-        if (!res)
-            return res;
-
-        res = mnview.AddSmartContractBalance(ParamIDs::DFIPXXXX, script, tokenAmount);
-        if (!res)
-            return res;
-
-        return Res::Ok();
-    }
-
-    Res operator()(const CSmartContractMessage& obj) const {
-        if (obj.accounts.empty()) {
-            return Res::Err("Contract account parameters missing");
-        }
-        auto contracts = Params().GetConsensus().smartContracts;
-
-        auto contract = contracts.find(obj.name);
-        if (contract == contracts.end())
-            return Res::Err("Specified smart contract not found");
-
         // Convert to switch when it's long enough.
         if (obj.name == SMART_CONTRACT_DFIP_2201)
             return HandleDFIP2201Contract(obj);
-        else if (obj.name == SMART_CONTRACT_DFIP_XXXX)
-            return HandleDFIPXXXXContract(obj);
 
         return Res::Err("Specified smart contract not found");
     }
@@ -3294,6 +3333,14 @@ public:
 
     Res operator()(const CWithdrawFromVaultMessage& obj) const {
         return EraseHistory(obj.to);
+    }
+
+    Res operator()(const CDepositFutureSwapMessage& obj) const {
+        return EraseHistory(obj.from);
+    }
+
+    Res operator()(const CWithdrawFutureSwapMessage& obj) const {
+        return EraseHistory(obj.from);
     }
 
     Res operator()(const CLoanPaybackLoanMessage& obj) const {

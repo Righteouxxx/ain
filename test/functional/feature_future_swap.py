@@ -3,7 +3,7 @@
 # Copyright (c) DeFi Blockchain Developers
 # Distributed under the MIT software license, see the accompanying
 # file LICENSE or http://www.opensource.org/licenses/mit-license.php.
-"""Test smart contracts future"""
+"""Test future swap"""
 
 from test_framework.test_framework import DefiTestFramework
 
@@ -13,7 +13,7 @@ from decimal import Decimal
 import time
 import calendar
 
-class SmartContractFutureTest(DefiTestFramework):
+class FutureSwapTest(DefiTestFramework):
     account0 = None
     oracle_id1 = None
     symbolDFI = "DFI"
@@ -22,8 +22,6 @@ class SmartContractFutureTest(DefiTestFramework):
     idDFI = 0
     iddUSD = 0
     idDOGE = 0
-    dfipDeposit = 'futureswap/deposit'
-    dfipList = 'futureswap/list'
     dfipxxxAddress = "bcrt1qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqpsqgljc"
     period_blocks = 10
     reward_pct = 0.1
@@ -146,24 +144,23 @@ class SmartContractFutureTest(DefiTestFramework):
 
     def test_beforeFCH(self):
         # Check invalid calls
-        assert_raises_rpc_error(-32600, 'called before FortCanningHill height', self.nodes[0].executesmartcontract, self.dfipDeposit, '10@' + self.idDOGE, self.account0)
+        assert_raises_rpc_error(-32600, 'called before FortCanningHill height', self.nodes[0].depositfutureswap, self.account0, '10@' + self.idDOGE, "DUSD")
 
     def test_activate_dfip(self):
-        assert_raises_rpc_error(-32600, 'DFIPXXXX smart contract is not enabled', self.nodes[0].executesmartcontract, self.dfipDeposit, '10@' + self.idDOGE, self.account0)
+        assert_raises_rpc_error(-32600, 'DFIPXXXX smart contract is not enabled', self.nodes[0].depositfutureswap, self.account0, '10@' + self.idDOGE, "DUSD")
         self.nodes[0].setgov({"ATTRIBUTES":{'v0/params/dfipxxxx/active':'false'}})
         self.nodes[0].generate(1)
 
-        assert_raises_rpc_error(-32600, 'DFIPXXXX smart contract is not enabled', self.nodes[0].executesmartcontract, self.dfipDeposit, '10@' + self.idDOGE, self.account0)
+        assert_raises_rpc_error(-32600, 'DFIPXXXX smart contract is not enabled', self.nodes[0].depositfutureswap, self.account0, '10@' + self.idDOGE, "DUSD")
         self.nodes[0].setgov({"ATTRIBUTES":{'v0/params/dfipxxxx/active':'true'}})
         self.nodes[0].generate(1)
 
     def test_invalid_input(self):
-        assert_raises_rpc_error(-3, 'Amount out of range', self.nodes[0].executesmartcontract, self.dfipDeposit, '-1@2', self.account0)
-        assert_raises_rpc_error(-5, 'Invalid address', self.nodes[0].executesmartcontract, self.dfipDeposit, '10@' + self.idDOGE, "000000000000000000000000000000000000000000")
-        assert_raises_rpc_error(-8, 'Loan token source address must be provided for DFIPXXXX', self.nodes[0].executesmartcontract, self.dfipDeposit, '10@' + self.idDOGE)
-        assert_raises_rpc_error(-32600, 'No such loan token', self.nodes[0].executesmartcontract, self.dfipDeposit, '10@9999', self.account0)
-        assert_raises_rpc_error(-32600, 'Token DUSD is not allowed in DFIPXXXXContract', self.nodes[0].executesmartcontract, self.dfipDeposit, '10@' + self.iddUSD, self.account0)
-        assert_raises_rpc_error(-32600, 'No such loan token id 0', self.nodes[0].executesmartcontract, self.dfipDeposit, '10@0', self.account0)
+        assert_raises_rpc_error(-3, 'Amount out of range', self.nodes[0].depositfutureswap, self.account0, '-1@2', "DUSD")
+        assert_raises_rpc_error(-5, 'Invalid address', self.nodes[0].depositfutureswap, '000000000000000000000000000000000000000000', '10@' + self.iddUSD, "DUSD")
+        assert_raises_rpc_error(-8, 'tokenTo was not found', self.nodes[0].depositfutureswap, self.account0, '10@' + self.idDOGE, "TSLA")
+        assert_raises_rpc_error(-32600, 'No such loan token', self.nodes[0].depositfutureswap, self.account0, '10@9999', "DUSD")
+        assert_raises_rpc_error(-32600, 'No such loan token id 0', self.nodes[0].depositfutureswap, self.account0, '10@0', "DUSD")
 
     def test_list_smart_contracts(self):
         result = self.nodes[0].listsmartcontracts()
@@ -179,7 +176,7 @@ class SmartContractFutureTest(DefiTestFramework):
         accountBefore = self.nodes[0].getaccount(self.account0)
         [amountDogeBefore, _] = accountBefore[1].split("@")
 
-        tx = self.nodes[0].executesmartcontract(self.dfipDeposit, '100@' + self.idDOGE, self.account0)
+        tx = self.nodes[0].depositfutureswap(self.account0, '100@' + self.idDOGE, "DUSD")
         fee = self.nodes[0].gettransaction(tx)['fee']
         assert_equal(balanceBefore + fee, self.nodes[0].getbalance())
         self.nodes[0].generate(1)
@@ -194,40 +191,42 @@ class SmartContractFutureTest(DefiTestFramework):
     def test_desactivated_token(self):
         self.nodes[0].setgov({'ATTRIBUTES': {'v0/token/' + self.idDOGE +'/futureswap': 'false' }})
         self.nodes[0].generate(1)
-        assert_raises_rpc_error(-32600, 'DOGE is not an active DFIPXXX token!', self.nodes[0].executesmartcontract, self.dfipDeposit, '10@' + self.idDOGE, self.account0)
+        assert_raises_rpc_error(-32600, 'DOGE is not an active DFIPXXX token!', self.nodes[0].depositfutureswap, self.account0, '10@' + self.idDOGE, 'DUSD')
 
         self.nodes[0].setgov({'ATTRIBUTES': {'v0/token/' + self.idDOGE +'/futureswap': 'true' }})
         self.nodes[0].generate(1)
-        self.nodes[0].executesmartcontract(self.dfipDeposit, '100@' + self.idDOGE, self.account0)
+
+        self.nodes[0].depositfutureswap(self.account0, '100@' + self.idDOGE, "DUSD")
         self.nodes[0].generate(1)
 
     def test_automatic_swap(self):
         self.nodes[0].setgov({"ATTRIBUTES":{'v0/params/dfipxxxx/period_blocks': self.period_blocks}})
-        self.nodes[0].generate(10)
+        self.nodes[0].generate(1)
+        self.nodes[0].generate(self.period_blocks) # empty smart contract address
 
         newAddress = self.nodes[0].getnewaddress()
         self.nodes[0].accounttoaccount(self.account0, { newAddress: "100@" + self.idDOGE })
         self.nodes[0].generate(1)
 
-        self.nodes[0].executesmartcontract(self.dfipDeposit, '100@' + self.idDOGE, newAddress)
+        self.nodes[0].depositfutureswap(newAddress, '100@' + self.idDOGE, "DUSD")
         self.nodes[0].generate(1)
 
         balancesBefore = self.nodes[0].getaccount(newAddress)
         balancesContractBefore = self.nodes[0].getaccount(self.dfipxxxAddress)
-        self.nodes[0].generate(10)
+        self.nodes[0].generate(self.period_blocks) # execute future swap
 
         balancesAfter = self.nodes[0].getaccount(newAddress)
         balancesContractAfter = self.nodes[0].getaccount(self.dfipxxxAddress)
 
         assert_equal(balancesBefore, [])
-        assert_equal(balancesAfter, ["105.00000000@DUSD"]) # 5% default premium
+        assert_equal(balancesAfter, ["95.00000000@DUSD"]) # 5% default premium
 
         assert_equal(balancesContractBefore, ["100.00000000@DOGE"])
         assert_equal(balancesContractAfter, [])
 
     def test_token_tracking(self):
         gettokendusd = self.nodes[0].gettoken(self.iddUSD)[self.iddUSD]
-        assert_equal(gettokendusd['minted'], 2000315)
+        assert_equal(gettokendusd['minted'], 2000285)
 
         getburninfo = self.nodes[0].getburninfo()
         assert_equal(getburninfo['tokens'], ['300.00000000@DOGE'])
@@ -235,18 +234,20 @@ class SmartContractFutureTest(DefiTestFramework):
         history = self.nodes[0].listburnhistory()
         assert_equal(len(history), 2)
         assert_equal(history[0]['amounts'], ['100.00000000@DOGE'])
-        assert_equal(history[1]['amounts'], ['200.00000000@DOGE'])
         assert_equal(history[0]['type'], 'SmartContract')
-        assert_equal(history[1]['type'], 'SmartContract')
         assert_equal(history[0]['blockHeight'], history[1]['blockHeight'] + self.period_blocks)
+        assert_equal(history[1]['amounts'], ['200.00000000@DOGE'])
+        assert_equal(history[1]['type'], 'SmartContract')
 
     def test_account_history(self):
+        deposithistory = self.nodes[0].listaccounthistory("mine", {"txtype":"8"})
+        assert_equal(deposithistory[0]["amounts"], ['-100.00000000@DOGE'])
+        assert_equal(deposithistory[1]["amounts"], ['-100.00000000@DOGE'])
+        assert_equal(deposithistory[2]["amounts"], ['-100.00000000@DOGE'])
+
         smartContractHistory = self.nodes[0].listaccounthistory("mine", {"txtype":"K"})
-        assert_equal(smartContractHistory[0]["amounts"], ['105.00000000@DUSD'])
-        assert_equal(smartContractHistory[1]["amounts"], ['-100.00000000@DOGE'])
-        assert_equal(smartContractHistory[2]["amounts"], ['210.00000000@DUSD'])
-        assert_equal(smartContractHistory[3]["amounts"], ['-100.00000000@DOGE'])
-        assert_equal(smartContractHistory[4]["amounts"], ['-100.00000000@DOGE'])
+        assert_equal(smartContractHistory[0]["amounts"], ['95.00000000@DUSD'])
+        assert_equal(smartContractHistory[1]["amounts"], ['190.00000000@DUSD'])
 
     def test_reward_pct(self):
         self.nodes[0].setgov({"ATTRIBUTES":{'v0/params/dfipxxxx/reward_pct': self.reward_pct}})
@@ -256,13 +257,13 @@ class SmartContractFutureTest(DefiTestFramework):
         self.nodes[0].accounttoaccount(self.account0, { firstAddress: "100@" + self.idDOGE })
         self.nodes[0].generate(1)
 
-        self.nodes[0].executesmartcontract(self.dfipDeposit, '100@' + self.idDOGE, firstAddress)
+        self.nodes[0].depositfutureswap(firstAddress, '100@' + self.idDOGE, "DUSD")
         self.nodes[0].generate(1)
 
         self.nodes[0].generate(10)
 
         balances = self.nodes[0].getaccount(firstAddress)
-        assert_equal(balances, ["110.00000000@DUSD"]) # 10% reward pct
+        assert_equal(balances, ["90.00000000@DUSD"])
 
         self.nodes[0].setgov({'ATTRIBUTES': {'v0/token/' + self.idDOGE +'/futureswap_reward_pct': 0.1 }}) # set doge token reward pct
         self.nodes[0].generate(1)
@@ -271,34 +272,31 @@ class SmartContractFutureTest(DefiTestFramework):
         self.nodes[0].accounttoaccount(self.account0, { secondAddress: "100@" + self.idDOGE })
         self.nodes[0].generate(1)
 
-        self.nodes[0].executesmartcontract(self.dfipDeposit, '100@' + self.idDOGE, secondAddress)
+        self.nodes[0].depositfutureswap(secondAddress, '100@' + self.idDOGE, "DUSD")
         self.nodes[0].generate(1)
 
         self.nodes[0].generate(10)
 
         balances = self.nodes[0].getaccount(secondAddress)
-        assert_equal(balances, ["120.00000000@DUSD"]) # 10% reward pct
+        assert_equal(balances, ["80.00000000@DUSD"])
 
-    def test_dfip_list(self):
+    def test_list_futureswap(self):
         address = self.nodes[0].getnewaddress()
         self.nodes[0].accounttoaccount(self.account0, { address: "100@" + self.idDOGE })
         self.nodes[0].generate(1)
 
-        self.nodes[0].executesmartcontract(self.dfipDeposit, '100@' + self.idDOGE, address)
+        self.nodes[0].depositfutureswap(address, '100@' + self.idDOGE, "DUSD")
         self.nodes[0].generate(1)
 
-        list_balances = self.nodes[0].executesmartcontract(self.dfipList, "*", address)
+        list_balances = self.nodes[0].listfutureswap(address)
         assert_equal(list_balances, ["100.00000000@" + self.idDOGE])
 
         otherAddress = self.nodes[0].getnewaddress()
-        other_balances = self.nodes[0].executesmartcontract(self.dfipList, "*", otherAddress)
+        other_balances = self.nodes[0].listfutureswap(otherAddress)
         assert_equal(other_balances, [])
 
-        assert_raises_rpc_error(-8, 'Amount key should be set to dummy "*" for futureswap/list', self.nodes[0].executesmartcontract, self.dfipList, "not_*")
-        assert_raises_rpc_error(-8, 'Loan token source address must be provided to list', self.nodes[0].executesmartcontract, self.dfipList, "*")
-        assert_raises_rpc_error(-5, 'Invalid address', self.nodes[0].executesmartcontract, self.dfipList, "*", '000000000000000000000000000000000000000000')
-        assert_raises_rpc_error(-5, 'Invalid address', self.nodes[0].executesmartcontract, self.dfipList, "*", 'not_an_address')
-
+        assert_raises_rpc_error(-5, 'Invalid address', self.nodes[0].listfutureswap, '000000000000000000000000000000000000000000')
+        assert_raises_rpc_error(-5, 'Invalid address', self.nodes[0].listfutureswap, 'not_an_address')
 
     def run_test(self):
         self.setup()
@@ -316,8 +314,9 @@ class SmartContractFutureTest(DefiTestFramework):
         self.test_token_tracking()
         self.test_account_history()
         self.test_reward_pct()
-        self.test_dfip_list()
+        self.test_list_futureswap()
+        # self.test_withdraw() // TODO
 
 if __name__ == '__main__':
-    SmartContractFutureTest().main()
+    FutureSwapTest().main()
 

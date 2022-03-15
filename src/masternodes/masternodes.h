@@ -20,7 +20,7 @@
 #include <masternodes/tokens.h>
 #include <masternodes/undos.h>
 #include <masternodes/vault.h>
-#include <masternodes/smartcontracts.h>
+#include <masternodes/futures.h>
 #include <uint256.h>
 #include <wallet/ismine.h>
 
@@ -353,7 +353,7 @@ class CCustomCSView
         , public COracleView
         , public CICXOrderView
         , public CLoanView
-        , public CSmartContractView
+        , public CFutureSwapView
         , public CVaultView
 {
     void CheckPrefixes()
@@ -383,7 +383,7 @@ class CCustomCSView
             CLoanView               ::  LoanSetCollateralTokenCreationTx, LoanSetCollateralTokenKey, LoanSetLoanTokenCreationTx,
                                         LoanSetLoanTokenKey, LoanSchemeKey, DefaultLoanSchemeKey, DelayedLoanSchemeKey,
                                         DestroyLoanSchemeKey, LoanInterestByVault, LoanTokenAmount, LoanLiquidationPenalty, LoanInterestV2ByVault,
-            CSmartContractView      ::  BySmartContractBalanceKey,
+            CFutureSwapView         ::  ByFutureSwapBalanceKey,
             CVaultView              ::  VaultKey, OwnerVaultKey, CollateralKey, AuctionBatchKey, AuctionHeightKey, AuctionBidKey
         >();
     }
