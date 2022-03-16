@@ -95,7 +95,7 @@ Res CLoansConsensus::operator()(const CLoanSetLoanTokenMessage& obj) const {
     token.creationTx = tx.GetHash();
     token.creationHeight = height;
 
-    auto tokenId = mnview.CreateToken(token, false);
+    auto tokenId = mnview.CreateToken(token);
     if (!tokenId)
         return std::move(tokenId);
 
@@ -140,7 +140,7 @@ Res CLoansConsensus::operator()(const CLoanUpdateLoanTokenMessage& obj) const {
     if (obj.mintable != (pair->second.flags & (uint8_t)CToken::TokenFlags::Mintable))
         pair->second.flags ^= (uint8_t)CToken::TokenFlags::Mintable;
 
-    res = mnview.UpdateToken(pair->second.creationTx, pair->second, false);
+    res = mnview.UpdateToken(pair->second);
     return !res ? res : mnview.UpdateLoanToken(*loanToken, pair->first);
 }
 
@@ -352,7 +352,6 @@ Res CLoansConsensus::operator()(const CLoanTakeLoanMessage& obj) const {
             return res;
     }
 
-    LogPrint(BCLog::LOAN,"CLoanTakeLoanMessage():\n");
     auto scheme = mnview.GetLoanScheme(vault->schemeId);
     return CheckNextCollateralRatio(obj.vaultId, *scheme, *collaterals);
 }
@@ -434,7 +433,6 @@ Res CLoansConsensus::operator()(const CLoanPaybackLoanMessage& obj) const {
         if (!rate)
             return Res::Err("Cannot get interest rate for this token (%s)!", loanToken->symbol);
 
-        LogPrint(BCLog::LOAN,"CLoanPaybackLoanMessage()->%s->", loanToken->symbol); /* Continued */
         auto subInterest = TotalInterest(*rate, height);
         auto subLoan = paybackAmount - subInterest;
 
@@ -449,7 +447,6 @@ Res CLoansConsensus::operator()(const CLoanPaybackLoanMessage& obj) const {
         if (!res)
             return res;
 
-        LogPrint(BCLog::LOAN,"CLoanPaybackLoanMessage()->%s->", loanToken->symbol); /* Continued */
         res = mnview.EraseInterest(height, obj.vaultId, vault->schemeId, tokenId, subLoan, subInterest);
         if (!res)
             return res;

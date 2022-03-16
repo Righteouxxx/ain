@@ -7,7 +7,6 @@
 #include <masternodes/accounts.h>
 #include <masternodes/customtx.h>
 
-const std::vector<unsigned char> DfTxMarker = {'D', 'f', 'T', 'x'};
 
 CustomTxType CustomTxCodeToType(uint8_t ch) {
     switch (ch) {

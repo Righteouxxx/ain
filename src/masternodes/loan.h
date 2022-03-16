@@ -261,6 +261,14 @@ base_uint<128> TotalInterestCalculation(const CInterestRateV2& rate, uint32_t he
 CAmount CeilInterest(const base_uint<128>& value, uint32_t height);
 std::string GetInterestPerBlockHighPrecisionString(base_uint<128> value);
 
+// precisoin COIN ^3
+inline base_uint<128> InterestPerBlockCalculationV2(CAmount amount, CAmount tokenInterest, CAmount schemeInterest, uint32_t blockPerFay)
+{
+    auto netInterest = (tokenInterest + schemeInterest) / 100; // in %
+    static const auto blocksPerYear = 365 * blockPerFay;
+    return arith_uint256(amount) * netInterest * COIN / blocksPerYear;
+}
+
 struct CLoanTakeLoanMessage
 {
     CVaultId vaultId;
@@ -326,6 +334,7 @@ public:
     void ForEachDelayedDestroyScheme(std::function<bool (const std::string&, const uint64_t&)> callback);
 
     Res DeleteInterest(const CVaultId& vaultId, uint32_t height);
+    void EraseInterestDirect(const CVaultId& vaultId, DCT_ID id);
     std::optional<CInterestRateV2> GetInterestRate(const CVaultId& loanSchemeID, DCT_ID id, uint32_t height);
     void WriteInterestRate(const std::pair<CVaultId, DCT_ID>& pair, const CInterestRateV2& rate, uint32_t height);
     Res StoreInterest(uint32_t height, const CVaultId& vaultId, const std::string& loanSchemeID, DCT_ID id, CAmount loanIncreased);
@@ -338,6 +347,7 @@ public:
     Res AddLoanToken(const CVaultId& vaultId, CTokenAmount amount);
     Res SubLoanToken(const CVaultId& vaultId, CTokenAmount amount);
     std::optional<CBalances> GetLoanTokens(const CVaultId& vaultId);
+    void ForEachLoanTokenAmount(std::function<bool (const CVaultId&,  const CBalances&)> callback);
 
     Res SetLoanLiquidationPenalty(CAmount penalty);
     CAmount GetLoanLiquidationPenalty();

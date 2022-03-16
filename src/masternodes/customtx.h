@@ -89,8 +89,6 @@ enum CustomTxType : uint8_t
     AuctionBid              = 'I'
 };
 
-extern const std::vector<unsigned char> DfTxMarker;
-
 CustomTxType GuessCustomTxType(const CTransaction& tx, std::vector<unsigned char>& metadata, bool metadataValidation = false);
 CAmount GetNonMintedValueOut(const CTransaction& tx, DCT_ID tokenID);
 TAmounts GetNonMintedValuesOut(const CTransaction& tx);

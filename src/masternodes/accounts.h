@@ -96,7 +96,6 @@ public:
     struct ByBalanceKey { static constexpr uint8_t prefix() { return 'a'; } };
     struct ByHeightKey  { static constexpr uint8_t prefix() { return 'b'; } };
 
-private:
     Res SetBalance(CScript const & owner, CTokenAmount amount);
 };
 
