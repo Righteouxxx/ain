@@ -223,6 +223,13 @@ inline T InterestPerBlockCalculationV1(CAmount amount, CAmount tokenInterest, CA
     return MultiplyAmounts(netInterest, amount) / blocksPerYear;
 }
 
+inline base_uint<128> InterestPerBlockCalculationV2(CAmount amount, CAmount tokenInterest, CAmount schemeInterest)
+{
+    auto netInterest = (tokenInterest + schemeInterest) / 100; // in %
+    static const auto blocksPerYear = 365 * Params().GetConsensus().blocksPerDay();
+    return arith_uint256(amount) * netInterest * COIN / blocksPerYear;
+}
+
 CAmount CeilInterest(const base_uint<128>& value, uint32_t height)
 {
     if (static_cast<int>(height) >= Params().GetConsensus().FortCanningHillHeight) {
@@ -292,7 +299,7 @@ Res CLoanView::StoreInterest(uint32_t height, const CVaultId& vaultId, const std
     if (static_cast<int>(height) >= Params().GetConsensus().FortCanningHillHeight) {
         CBalances amounts;
         ReadBy<LoanTokenAmount>(vaultId, amounts);
-        rate.interestPerBlock = InterestPerBlockCalculationV2(amounts.balances[id], token->interest, scheme->rate, Params().GetConsensus().blocksPerDay());
+        rate.interestPerBlock = InterestPerBlockCalculationV2(amounts.balances[id], token->interest, scheme->rate);
 
     } else if (static_cast<int>(height) >= Params().GetConsensus().FortCanningMuseumHeight) {
         CAmount interestPerBlock = rate.interestPerBlock.GetLow64();
@@ -339,7 +346,7 @@ Res CLoanView::EraseInterest(uint32_t height, const CVaultId& vaultId, const std
     if (static_cast<int>(height) >= Params().GetConsensus().FortCanningHillHeight) {
         CBalances amounts;
         ReadBy<LoanTokenAmount>(vaultId, amounts);
-        rate.interestPerBlock = InterestPerBlockCalculationV2(amounts.balances[id], token->interest, scheme->rate, Params().GetConsensus().blocksPerDay());
+        rate.interestPerBlock = InterestPerBlockCalculationV2(amounts.balances[id], token->interest, scheme->rate);
 
     } else if (static_cast<int>(height) >= Params().GetConsensus().FortCanningMuseumHeight) {
         CAmount interestPerBlock = rate.interestPerBlock.GetLow64();

@@ -3718,7 +3718,7 @@ static Res VaultSplits(CCustomCSView& view, ATTRIBUTES& attributes, const DCT_ID
 
         view.EraseInterestDirect(vaultId, oldTokenId);
         rate.interestToHeight = multiplier < 0 ? rate.interestToHeight / std::abs(multiplier) : rate.interestToHeight * multiplier;
-        rate.interestPerBlock = InterestPerBlockCalculationV2(amounts->balances[newTokenId], loanToken->interest, loanSchemeRate, Params().GetConsensus().blocksPerDay());
+        rate.interestPerBlock = InterestPerBlockCalculationV2(amounts->balances[newTokenId], loanToken->interest, loanSchemeRate);
         view.WriteInterestRate(std::make_pair(vaultId, newTokenId), rate, height);
     }
 

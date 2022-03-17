@@ -262,12 +262,7 @@ CAmount CeilInterest(const base_uint<128>& value, uint32_t height);
 std::string GetInterestPerBlockHighPrecisionString(base_uint<128> value);
 
 // precisoin COIN ^3
-inline base_uint<128> InterestPerBlockCalculationV2(CAmount amount, CAmount tokenInterest, CAmount schemeInterest, uint32_t blockPerFay)
-{
-    auto netInterest = (tokenInterest + schemeInterest) / 100; // in %
-    static const auto blocksPerYear = 365 * blockPerFay;
-    return arith_uint256(amount) * netInterest * COIN / blocksPerYear;
-}
+base_uint<128> InterestPerBlockCalculationV2(CAmount amount, CAmount tokenInterest, CAmount schemeInterest);
 
 struct CLoanTakeLoanMessage
 {
